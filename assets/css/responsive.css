@@ -1,0 +1,260 @@
+/* ==========================================
+   Responsive Design
+   ========================================== */
+
+/* Tablets (768px and below) */
+@media (max-width: 768px) {
+    .navbar-container {
+        height: auto;
+        padding: 10px 20px;
+    }
+
+    .navbar-menu {
+        display: none;
+        position: absolute;
+        top: 70px;
+        left: 0;
+        right: 0;
+        flex-direction: column;
+        background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+        border-top: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .navbar-menu.active {
+        display: flex;
+    }
+
+    .nav-link {
+        padding: 15px 20px;
+        border-bottom: none;
+        border-left: 3px solid transparent;
+    }
+
+    .nav-link:hover,
+    .nav-link.active {
+        border-left-color: #42c88a;
+        border-bottom: none;
+        background: rgba(255, 255, 255, 0.1);
+    }
+
+    .menu-toggle {
+        display: block;
+    }
+
+    .navbar-end {
+        gap: 10px;
+    }
+
+    .user-dropdown {
+        right: -50px;
+    }
+
+    .container {
+        padding: 20px 15px;
+    }
+
+    .container-narrow {
+        padding: 20px 15px;
+    }
+
+    .row {
+        grid-template-columns: 1fr;
+    }
+
+    .card {
+        padding: 15px;
+    }
+
+    .form-row {
+        grid-template-columns: 1fr;
+    }
+
+    .table {
+        font-size: 0.9rem;
+    }
+
+    .table th,
+    .table td {
+        padding: 8px;
+    }
+
+    .btn-group {
+        flex-direction: column;
+    }
+
+    .btn {
+        width: 100%;
+    }
+
+    /* Footer responsive */
+    .footer-container {
+        grid-template-columns: 1fr;
+    }
+
+    .card-header {
+        flex-direction: column;
+        gap: 10px;
+        align-items: flex-start;
+    }
+
+    /* Hide less important elements on mobile */
+    .hide-mobile {
+        display: none;
+    }
+
+    .user-info {
+        display: none;
+    }
+
+    .brand-logo {
+        font-size: 1.2rem;
+    }
+}
+
+/* Large screens (1200px and above) */
+@media (min-width: 1200px) {
+    .container {
+        padding: 40px 60px;
+    }
+
+    .row {
+        grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+    }
+}
+
+/* Small devices (480px and below) */
+@media (max-width: 480px) {
+    .container {
+        padding: 15px 10px;
+    }
+
+    .navbar-container {
+        padding: 10px 15px;
+    }
+
+    .brand-logo {
+        font-size: 1rem;
+    }
+
+    .card {
+        padding: 12px;
+    }
+
+    .btn {
+        padding: 8px 16px;
+        font-size: 0.9rem;
+    }
+
+    .btn-lg {
+        padding: 12px 20px;
+    }
+
+    input,
+    select,
+    textarea {
+        font-size: 16px; /* Prevents zoom on iOS */
+    }
+
+    .table th,
+    .table td {
+        padding: 6px;
+    }
+
+    .navbar-menu {
+        top: 60px;
+    }
+
+    .user-dropdown {
+        min-width: 180px;
+    }
+
+    .footer-container {
+        grid-template-columns: 1fr;
+        gap: 20px;
+    }
+
+    .footer-section h3,
+    .footer-section h4 {
+        font-size: 1rem;
+    }
+}
+
+/* Landscape orientation */
+@media (max-height: 600px) {
+    .navbar-container {
+        height: 60px;
+    }
+
+    .nav-link {
+        padding: 18px 12px;
+        font-size: 0.9rem;
+    }
+
+    .container {
+        padding: 20px;
+    }
+}
+
+/* Tablet landscape */
+@media (max-width: 1024px) and (orientation: landscape) {
+    .row {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .container {
+        padding: 20px;
+    }
+}
+
+/* Print styles */
+@media print {
+    .navbar,
+    .footer,
+    .btn-group,
+    .menu-toggle,
+    .theme-toggle {
+        display: none;
+    }
+
+    body {
+        background: white;
+    }
+
+    .card {
+        page-break-inside: avoid;
+        box-shadow: none;
+        border: 1px solid #ddd;
+    }
+}
+
+/* High DPI displays (Retina) */
+@media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
+    /* Optimize for high pixel density */
+    .spinner,
+    .badge {
+        transform: translateZ(0);
+    }
+}
+
+/* @supports for modern features */
+@supports (display: grid) {
+    .row {
+        display: grid;
+    }
+}
+
+/* Accessibility - Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+    * {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+    }
+}
+
+/* Dark mode preference */
+@media (prefers-color-scheme: dark) {
+    html:not([data-theme="light"]) {
+        color-scheme: dark;
+    }
+}

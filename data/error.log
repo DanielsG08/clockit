@@ -1,0 +1,104 @@
+[16-Mar-2026 16:04:26 UTC] PHP Fatal error:  Uncaught Error: Call to undefined function formatDate() in C:\xampp\htdocs\Clock-it\clock-it\reports.php:215
+Stack trace:
+#0 {main}
+  thrown in C:\xampp\htdocs\Clock-it\clock-it\reports.php on line 215
+[16-Mar-2026 16:04:26 UTC] Fatal: [1] Uncaught Error: Call to undefined function formatDate() in C:\xampp\htdocs\Clock-it\clock-it\reports.php:215
+Stack trace:
+#0 {main}
+  thrown in C:\xampp\htdocs\Clock-it\clock-it\reports.php:215
+[16-Mar-2026 16:04:48 UTC] PHP Fatal error:  Uncaught Error: Call to undefined function formatDate() in C:\xampp\htdocs\Clock-it\clock-it\reports.php:215
+Stack trace:
+#0 {main}
+  thrown in C:\xampp\htdocs\Clock-it\clock-it\reports.php on line 215
+[16-Mar-2026 16:04:48 UTC] Fatal: [1] Uncaught Error: Call to undefined function formatDate() in C:\xampp\htdocs\Clock-it\clock-it\reports.php:215
+Stack trace:
+#0 {main}
+  thrown in C:\xampp\htdocs\Clock-it\clock-it\reports.php:215
+[16-Mar-2026 16:05:10 UTC] PHP Fatal error:  Uncaught Error: Call to undefined function formatDate() in C:\xampp\htdocs\Clock-it\clock-it\reports.php:215
+Stack trace:
+#0 {main}
+  thrown in C:\xampp\htdocs\Clock-it\clock-it\reports.php on line 215
+[16-Mar-2026 16:05:10 UTC] Fatal: [1] Uncaught Error: Call to undefined function formatDate() in C:\xampp\htdocs\Clock-it\clock-it\reports.php:215
+Stack trace:
+#0 {main}
+  thrown in C:\xampp\htdocs\Clock-it\clock-it\reports.php:215
+[16-Mar-2026 16:26:21 UTC] PHP Fatal error:  Uncaught Error: Call to undefined function formatDate() in C:\xampp\htdocs\Clock-it\clock-it\reports.php:215
+Stack trace:
+#0 {main}
+  thrown in C:\xampp\htdocs\Clock-it\clock-it\reports.php on line 215
+[16-Mar-2026 16:26:21 UTC] Fatal: [1] Uncaught Error: Call to undefined function formatDate() in C:\xampp\htdocs\Clock-it\clock-it\reports.php:215
+Stack trace:
+#0 {main}
+  thrown in C:\xampp\htdocs\Clock-it\clock-it\reports.php:215
+[16-Mar-2026 16:32:19 UTC] PHP Fatal error:  Uncaught Error: Call to undefined function formatDate() in C:\xampp\htdocs\Clock-it\clock-it\reports.php:215
+Stack trace:
+#0 {main}
+  thrown in C:\xampp\htdocs\Clock-it\clock-it\reports.php on line 215
+[16-Mar-2026 16:32:19 UTC] Fatal: [1] Uncaught Error: Call to undefined function formatDate() in C:\xampp\htdocs\Clock-it\clock-it\reports.php:215
+Stack trace:
+#0 {main}
+  thrown in C:\xampp\htdocs\Clock-it\clock-it\reports.php:215
+[16-Mar-2026 16:32:23 UTC] PHP Fatal error:  Uncaught Error: Call to undefined function formatDate() in C:\xampp\htdocs\Clock-it\clock-it\reports.php:215
+Stack trace:
+#0 {main}
+  thrown in C:\xampp\htdocs\Clock-it\clock-it\reports.php on line 215
+[16-Mar-2026 16:32:23 UTC] Fatal: [1] Uncaught Error: Call to undefined function formatDate() in C:\xampp\htdocs\Clock-it\clock-it\reports.php:215
+Stack trace:
+#0 {main}
+  thrown in C:\xampp\htdocs\Clock-it\clock-it\reports.php:215
+[16-Mar-2026 16:34:58 UTC] PHP Fatal error:  Uncaught Error: Call to undefined function formatDate() in C:\xampp\htdocs\Clock-it\clock-it\reports.php:215
+Stack trace:
+#0 {main}
+  thrown in C:\xampp\htdocs\Clock-it\clock-it\reports.php on line 215
+[16-Mar-2026 16:34:58 UTC] Fatal: [1] Uncaught Error: Call to undefined function formatDate() in C:\xampp\htdocs\Clock-it\clock-it\reports.php:215
+Stack trace:
+#0 {main}
+  thrown in C:\xampp\htdocs\Clock-it\clock-it\reports.php:215
+[16-Mar-2026 16:46:24 UTC] PHP Fatal error:  Uncaught Error: Call to undefined function formatDate() in C:\xampp\htdocs\Clock-it\clock-it\reports.php:215
+Stack trace:
+#0 {main}
+  thrown in C:\xampp\htdocs\Clock-it\clock-it\reports.php on line 215
+[16-Mar-2026 16:46:24 UTC] Fatal: [1] Uncaught Error: Call to undefined function formatDate() in C:\xampp\htdocs\Clock-it\clock-it\reports.php:215
+Stack trace:
+#0 {main}
+  thrown in C:\xampp\htdocs\Clock-it\clock-it\reports.php:215
+[16-Mar-2026 17:00:57 UTC] PHP Fatal error:  Uncaught Error: Call to undefined function formatDate() in C:\xampp\htdocs\Clock-it\clock-it\reports.php:215
+Stack trace:
+#0 {main}
+  thrown in C:\xampp\htdocs\Clock-it\clock-it\reports.php on line 215
+[16-Mar-2026 17:00:57 UTC] Fatal: [1] Uncaught Error: Call to undefined function formatDate() in C:\xampp\htdocs\Clock-it\clock-it\reports.php:215
+Stack trace:
+#0 {main}
+  thrown in C:\xampp\htdocs\Clock-it\clock-it\reports.php:215
+[16-Mar-2026 17:13:58 UTC] PHP Fatal error:  Uncaught Error: Call to undefined function formatDate() in C:\xampp\htdocs\Clock-it\clock-it\reports.php:215
+Stack trace:
+#0 {main}
+  thrown in C:\xampp\htdocs\Clock-it\clock-it\reports.php on line 215
+[16-Mar-2026 17:13:58 UTC] Fatal: [1] Uncaught Error: Call to undefined function formatDate() in C:\xampp\htdocs\Clock-it\clock-it\reports.php:215
+Stack trace:
+#0 {main}
+  thrown in C:\xampp\htdocs\Clock-it\clock-it\reports.php:215
+[16-Mar-2026 17:48:37 UTC] PHP Fatal error:  Uncaught Error: Call to undefined function formatDate() in C:\xampp\htdocs\Clock-it\clock-it\reports.php:215
+Stack trace:
+#0 {main}
+  thrown in C:\xampp\htdocs\Clock-it\clock-it\reports.php on line 215
+[16-Mar-2026 17:48:37 UTC] Fatal: [1] Uncaught Error: Call to undefined function formatDate() in C:\xampp\htdocs\Clock-it\clock-it\reports.php:215
+Stack trace:
+#0 {main}
+  thrown in C:\xampp\htdocs\Clock-it\clock-it\reports.php:215
+[16-Mar-2026 17:48:58 UTC] PHP Fatal error:  Uncaught Error: Call to undefined function formatDate() in C:\xampp\htdocs\Clock-it\clock-it\reports.php:215
+Stack trace:
+#0 {main}
+  thrown in C:\xampp\htdocs\Clock-it\clock-it\reports.php on line 215
+[16-Mar-2026 17:48:58 UTC] Fatal: [1] Uncaught Error: Call to undefined function formatDate() in C:\xampp\htdocs\Clock-it\clock-it\reports.php:215
+Stack trace:
+#0 {main}
+  thrown in C:\xampp\htdocs\Clock-it\clock-it\reports.php:215
+[16-Mar-2026 18:09:16 UTC] PHP Fatal error:  Uncaught Error: Call to undefined function formatDate() in C:\xampp\htdocs\Clock-it\clock-it\reports.php:215
+Stack trace:
+#0 {main}
+  thrown in C:\xampp\htdocs\Clock-it\clock-it\reports.php on line 215
+[16-Mar-2026 18:09:16 UTC] Fatal: [1] Uncaught Error: Call to undefined function formatDate() in C:\xampp\htdocs\Clock-it\clock-it\reports.php:215
+Stack trace:
+#0 {main}
+  thrown in C:\xampp\htdocs\Clock-it\clock-it\reports.php:215
