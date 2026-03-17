@@ -38,8 +38,8 @@ $currentSession = $db->fetch(
                 <div id="display" style="font-size: 4rem; font-family: 'Courier New', monospace; font-weight: bold; color: #667eea; letter-spacing: 5px;">
                     00:00:00
                 </div>
-                <div id="breakDisplay" style="font-size: 1.2rem; color: var(--text-secondary); margin-top: 10px; display: none;">
-                    Break: <span id="breakTime">00:00</span>
+                <div id="breakDisplay" style="font-size: 2rem; color: #f39c12; margin-top: 15px; display: none; font-family: 'Courier New', monospace; font-weight: bold; letter-spacing: 3px;">
+                    Break: <span id="breakTime">00:00:00</span>
                 </div>
             </div>
 
@@ -187,6 +187,7 @@ $currentSession = $db->fetch(
                 this.isPaused = false;
                 cancelAnimationFrame(this.animationId);
                 this.elements.display.textContent = '00:00:00';
+                this.elements.breakTime.textContent = '00:00:00';
                 this.elements.breakDisplay.style.display = 'none';
                 this.elements.description.value = '';
                 this.elements.startBtn.textContent = '▶ Start';
@@ -200,6 +201,7 @@ $currentSession = $db->fetch(
                 this.breakStartTime = Date.now();
                 this.elements.breakDisplay.style.display = 'block';
                 this.updateButtons();
+                this.tick();
             }
 
             resumeWork() {
@@ -210,7 +212,6 @@ $currentSession = $db->fetch(
                 }
                 this.onBreak = false;
                 this.breakStartTime = null;
-                this.elements.breakDisplay.style.display = 'none';
                 this.isRunning = true;
                 this.updateButtons();
                 this.tick();
@@ -219,10 +220,20 @@ $currentSession = $db->fetch(
             tick() {
                 if (!this.isRunning) return;
 
+                // Update break display if there's any break time
+                const totalBreakTime = Math.floor(this.breakTime / 1000);
                 if (this.onBreak) {
-                    const breakDuration = Math.floor((Date.now() - this.breakStartTime) / 1000);
-                    this.elements.breakTime.textContent = this.formatTime(breakDuration);
-                } else {
+                    const currentBreakDuration = Math.floor((Date.now() - this.breakStartTime) / 1000);
+                    this.elements.breakTime.textContent = this.formatTime(totalBreakTime + currentBreakDuration);
+                } else if (totalBreakTime > 0) {
+                    this.elements.breakTime.textContent = this.formatTime(totalBreakTime);
+                }
+
+                if (this.breakTime > 0 || this.onBreak) {
+                    this.elements.breakDisplay.style.display = 'block';
+                }
+
+                if (!this.onBreak) {
                     this.elapsedMs = Date.now() - this.startTime;
                     this.elapsed = Math.floor(this.elapsedMs / 1000);
                     this.elements.display.textContent = this.formatTime(this.elapsed);
