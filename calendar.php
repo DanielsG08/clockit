@@ -31,6 +31,46 @@ try {
     // Table might not exist yet, continue without events
 }
 
+// Also fetch time sessions within the month and include them as calendar items
+try {
+    $sessions = $db->fetchAll(
+        "SELECT ts.id, ts.start_time, ts.end_time, ts.duration_seconds, ts.description, ts.project_id, p.name as project_name, p.color as project_color
+         FROM time_sessions ts
+         LEFT JOIN projects p ON ts.project_id = p.id
+         WHERE ts.user_id = ? AND DATE(ts.start_time) BETWEEN ? AND ?
+         ORDER BY ts.start_time ASC",
+        [$userId, $monthStart, $monthEnd]
+    ) ?? [];
+
+    foreach ($sessions as $s) {
+        $dateOnly = date('Y-m-d', strtotime($s['start_time']));
+        $timeOnly = date('H:i', strtotime($s['start_time']));
+        $title = $s['project_name'] ? ($s['project_name'] . ' - Session') : 'Session';
+        $color = $s['project_color'] ?: '#42c88a';
+        $desc = $s['description'] ?: '';
+        $durationLabel = '';
+        if (!empty($s['duration_seconds'])) {
+            $h = floor($s['duration_seconds'] / 3600);
+            $m = floor(($s['duration_seconds'] % 3600) / 60);
+            $durationLabel = trim(($h ? $h . 'h ' : '') . ($m ? $m . 'm' : ''));
+            if ($durationLabel) $desc = ($desc ? $desc . '\n' : '') . 'Duration: ' . $durationLabel;
+        }
+
+        $events[] = [
+            'id' => 'session_' . $s['id'],
+            'title' => $title,
+            'description' => $desc,
+            'event_date' => $dateOnly,
+            'event_time' => $timeOnly,
+            'color' => $color,
+            'calendar_type' => 'Session',
+            'session_id' => $s['id']
+        ];
+    }
+} catch (Exception $e) {
+    // ignore session loading errors
+}
+
 // Build calendar arrays for events
 $eventsByDate = [];
 foreach ($events as $event) {
