@@ -359,6 +359,48 @@ $csrfToken = SecurityHelper::generateCSRFToken();
         </div>
     </div>
 
+    <!-- Session Detail Modal -->
+    <div id="sessionModal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 1100; align-items: center; justify-content: center;">
+        <div style="background: var(--bg-primary); padding: 20px; border-radius: 10px; max-width: 560px; width: 92%; max-height: 90vh; overflow-y: auto; box-shadow: 0 10px 40px rgba(0,0,0,0.3);">
+            <h3 id="sessionModalTitle">Session Details</h3>
+            <p id="sessionMeta" style="color: var(--text-secondary);"></p>
+
+            <div id="sessionDetails" style="margin-top: 8px; white-space: pre-wrap; color: var(--text-primary);"></div>
+
+            <form id="sessionEditForm" style="display:none; flex-direction: column; gap: 10px; margin-top: 12px;">
+                <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrfToken); ?>">
+                <input type="hidden" id="sessId" name="id">
+
+                <label>Project
+                    <select id="sessProject" name="project_id" style="width:100%; padding:8px; margin-top:4px;"></select>
+                </label>
+
+                <label>Start Time
+                    <input type="datetime-local" id="sessStart" name="start_time" style="width:100%; padding:8px; margin-top:4px;">
+                </label>
+
+                <label>End Time
+                    <input type="datetime-local" id="sessEnd" name="end_time" style="width:100%; padding:8px; margin-top:4px;">
+                </label>
+
+                <label>Description
+                    <textarea id="sessDesc" name="description" rows="3" style="width:100%; padding:8px; margin-top:4px;"></textarea>
+                </label>
+
+                <div style="display:flex; gap:10px; margin-top:8px;">
+                    <button type="button" id="saveSessionBtn" class="btn btn-primary">Save</button>
+                    <button type="button" id="cancelEditSessionBtn" class="btn btn-secondary">Cancel</button>
+                    <button type="button" id="deleteSessionBtn" class="btn btn-danger" style="margin-left:auto;">Delete</button>
+                </div>
+            </form>
+
+            <div style="margin-top:12px; display:flex; gap:8px;">
+                <button type="button" id="editSessionBtn" class="btn btn-primary">Edit</button>
+                <button type="button" id="closeSessionModalBtn" class="btn btn-secondary">Close</button>
+            </div>
+        </div>
+    </div>
+
     <script>
         let currentSelectedDate = null;
         const HOLIDAYS = <?php echo json_encode($holidays); ?>;
@@ -486,8 +528,108 @@ $csrfToken = SecurityHelper::generateCSRFToken();
                         html += '<p style="color: var(--text-secondary);">No events or sessions scheduled for this day.</p>';
                     }
                     document.getElementById('eventsList').innerHTML = html;
-                });
+                            });
         }
+
+                    // Open session detail modal
+                    async function openSessionDetail(sessionId) {
+                        try {
+                            const resp = await fetch(`${APP_BASE_URL}/api/sessions/detail.php?id=${sessionId}`);
+                            const data = await resp.json();
+                            if (!data.success) {
+                                Notification.show(data.message || 'Failed to load session', 'error');
+                                return;
+                            }
+
+                            const s = data.data;
+                            document.getElementById('sessionModalTitle').textContent = s.project_name ? (s.project_name + ' — Session') : 'Session Details';
+                            document.getElementById('sessionMeta').textContent = `${s.start_time} — ${s.end_time} (${s.duration_seconds ? Math.floor(s.duration_seconds/60) + ' min' : 'unknown'})`;
+                            document.getElementById('sessionDetails').textContent = s.description || 'No description.';
+
+                            // populate edit form
+                            document.getElementById('sessId').value = s.id;
+                            // load projects into select
+                            const projSelect = document.getElementById('sessProject');
+                            projSelect.innerHTML = '<option value="">(No project)</option>';
+                            const projectsResp = await fetch(`${APP_BASE_URL}/api/projects/get.php`);
+                            const projectsData = await projectsResp.json();
+                            if (projectsData.success && Array.isArray(projectsData.data)) {
+                                projectsData.data.forEach(p => {
+                                    const opt = document.createElement('option');
+                                    opt.value = p.id;
+                                    opt.textContent = p.name;
+                                    projSelect.appendChild(opt);
+                                });
+                            }
+                            if (s.project_id) projSelect.value = s.project_id;
+                            document.getElementById('sessStart').value = s.start_time ? s.start_time.replace(' ', 'T') : '';
+                            document.getElementById('sessEnd').value = s.end_time ? s.end_time.replace(' ', 'T') : '';
+                            document.getElementById('sessDesc').value = s.description || '';
+
+                            document.getElementById('sessionModal').style.display = 'flex';
+                            document.getElementById('sessionEditForm').style.display = 'none';
+                            document.getElementById('editSessionBtn').style.display = 'inline-block';
+                        } catch (err) {
+                            console.error(err);
+                            Notification.show('Error loading session', 'error');
+                        }
+                    }
+
+                    document.getElementById('closeSessionModalBtn').addEventListener('click', () => {
+                        document.getElementById('sessionModal').style.display = 'none';
+                    });
+
+                    document.getElementById('editSessionBtn').addEventListener('click', () => {
+                        document.getElementById('sessionEditForm').style.display = 'flex';
+                        document.getElementById('editSessionBtn').style.display = 'none';
+                    });
+
+                    document.getElementById('cancelEditSessionBtn').addEventListener('click', () => {
+                        document.getElementById('sessionEditForm').style.display = 'none';
+                        document.getElementById('editSessionBtn').style.display = 'inline-block';
+                    });
+
+                    document.getElementById('saveSessionBtn').addEventListener('click', async () => {
+                        const form = document.getElementById('sessionEditForm');
+                        const formData = new FormData(form);
+                        try {
+                            const resp = await fetch(`${APP_BASE_URL}/api/sessions/update.php`, { method: 'POST', body: formData });
+                            const data = await resp.json();
+                            if (data.success) {
+                                Notification.show('Session updated', 'success');
+                                document.getElementById('sessionModal').style.display = 'none';
+                                await refreshCalendarData();
+                                loadEventsForDate(currentSelectedDate);
+                            } else {
+                                Notification.show(data.message || 'Failed to update', 'error');
+                            }
+                        } catch (err) {
+                            Notification.show('Error: ' + err.message, 'error');
+                        }
+                    });
+
+                    document.getElementById('deleteSessionBtn').addEventListener('click', async () => {
+                        if (!confirm('Delete this session?')) return;
+                        const id = document.getElementById('sessId').value;
+                        const formData = new FormData();
+                        formData.append('id', id);
+                        formData.append('csrf_token', document.querySelector('input[name="csrf_token"]').value);
+
+                        try {
+                            const resp = await fetch(`${APP_BASE_URL}/api/sessions/delete.php`, { method: 'POST', body: formData });
+                            const data = await resp.json();
+                            if (data.success) {
+                                Notification.show('Session deleted', 'success');
+                                document.getElementById('sessionModal').style.display = 'none';
+                                await refreshCalendarData();
+                                loadEventsForDate(currentSelectedDate);
+                            } else {
+                                Notification.show(data.message || 'Failed to delete', 'error');
+                            }
+                        } catch (err) {
+                            Notification.show('Error: ' + err.message, 'error');
+                        }
+                    });
 
         async function refreshCalendarData() {
             const fromDate = '<?php echo $monthStart; ?>';
