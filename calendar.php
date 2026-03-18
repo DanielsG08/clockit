@@ -18,57 +18,60 @@ if ($year < 2020 || $year > 2100) $year = date('Y');
 $monthStart = date('Y-m-01', strtotime("$year-$month-01"));
 $monthEnd = date('Y-m-t', strtotime("$year-$month-01"));
 
-$events = [];
-try {
-    $events = $db->fetchAll(
-        "SELECT id, title, description, event_date, event_time, color, calendar_type
-         FROM calendar_events
-         WHERE user_id = ? AND event_date BETWEEN ? AND ?
-         ORDER BY event_date ASC, event_time ASC",
-        [$userId, $monthStart, $monthEnd]
-    ) ?? [];
-} catch (Exception $e) {
-    // Table might not exist yet, continue without events
+// Load user calendars (for filtering and management)
+$calendarId = isset($_GET['calendar_id']) ? (int)$_GET['calendar_id'] : 0;
+$calendars = $db->fetchAll(
+    "SELECT id, name, color FROM calendars WHERE user_id = ? ORDER BY name ASC",
+    [$userId]
+) ?? [];
+
+// Ensure at least one calendar exists
+if (empty($calendars)) {
+    $defaultCalendarId = $db->insert('calendars', [
+        'user_id' => $userId,
+        'name' => 'Default',
+        'color' => '#667eea'
+    ]);
+    $calendars = [[
+        'id' => $defaultCalendarId,
+        'name' => 'Default',
+        'color' => '#667eea'
+    ]];
 }
 
-// Also fetch time sessions within the month and include them as calendar items
-try {
-    $sessions = $db->fetchAll(
-        "SELECT ts.id, ts.start_time, ts.end_time, ts.duration_seconds, ts.description, ts.project_id, p.name as project_name, p.color as project_color
-         FROM time_sessions ts
-         LEFT JOIN projects p ON ts.project_id = p.id
-         WHERE ts.user_id = ? AND DATE(ts.start_time) BETWEEN ? AND ?
-         ORDER BY ts.start_time ASC",
-        [$userId, $monthStart, $monthEnd]
-    ) ?? [];
+// Keep the current selection valid
+$validIds = array_column($calendars, 'id');
+if ($calendarId && !in_array($calendarId, $validIds)) {
+    $calendarId = 0;
+}
 
-    foreach ($sessions as $s) {
-        $dateOnly = date('Y-m-d', strtotime($s['start_time']));
-        $timeOnly = date('H:i', strtotime($s['start_time']));
-        $title = $s['project_name'] ? ($s['project_name'] . ' - Session') : 'Session';
-        $color = $s['project_color'] ?: '#42c88a';
-        $desc = $s['description'] ?: '';
-        $durationLabel = '';
-        if (!empty($s['duration_seconds'])) {
-            $h = floor($s['duration_seconds'] / 3600);
-            $m = floor(($s['duration_seconds'] % 3600) / 60);
-            $durationLabel = trim(($h ? $h . 'h ' : '') . ($m ? $m . 'm' : ''));
-            if ($durationLabel) $desc = ($desc ? $desc . '\n' : '') . 'Duration: ' . $durationLabel;
-        }
-
-        $events[] = [
-            'id' => 'session_' . $s['id'],
-            'title' => $title,
-            'description' => $desc,
-            'event_date' => $dateOnly,
-            'event_time' => $timeOnly,
-            'color' => $color,
-            'calendar_type' => 'Session',
-            'session_id' => $s['id']
-        ];
+$selectedCalendar = null;
+foreach ($calendars as $cal) {
+    if ($cal['id'] === $calendarId) {
+        $selectedCalendar = $cal;
+        break;
     }
+}
+
+$events = [];
+try {
+    $sql = "SELECT id, title, description, event_date, event_time, color, calendar_id
+         FROM calendar_events
+         WHERE user_id = ?";
+    $params = [$userId];
+
+    if ($calendarId > 0) {
+        $sql .= " AND calendar_id = ?";
+        $params[] = $calendarId;
+    }
+
+    $sql .= " AND event_date BETWEEN ? AND ? ORDER BY event_date ASC, event_time ASC";
+    $params[] = $monthStart;
+    $params[] = $monthEnd;
+
+    $events = $db->fetchAll($sql, $params) ?? [];
 } catch (Exception $e) {
-    // ignore session loading errors
+    // Table might not exist yet, continue without events
 }
 
 // Build calendar arrays for events
@@ -79,75 +82,6 @@ foreach ($events as $event) {
     }
     $eventsByDate[$event['event_date']][] = $event;
 }
-
-function getNationalHolidays($year, $month) {
-    $holidays = [];
-
-    // Fixed date holidays
-    $fixed = [
-        '01-01' => 'New Year\'s Day',
-        '07-04' => 'Independence Day',
-        '11-11' => 'Veterans Day',
-        '12-25' => 'Christmas Day'
-    ];
-
-    foreach ($fixed as $md => $name) {
-        list($m, $d) = explode('-', $md);
-        if ((int)$m === (int)$month) {
-            $holidays[sprintf('%04d-%02d-%02d', $year, $m, $d)] = $name;
-        }
-    }
-
-    // Helper to get nth weekday of month
-    $getNthWeekday = function($year, $month, $weekday, $n) {
-        $first = new DateTime("$year-$month-01");
-        $firstWeekday = (int)$first->format('w');
-        $offset = ($weekday - $firstWeekday + 7) % 7;
-        $day = 1 + $offset + 7 * ($n - 1);
-        if ($day > (int)date('t', strtotime("$year-$month-01"))) {
-            return null;
-        }
-        return sprintf('%04d-%02d-%02d', $year, $month, $day);
-    };
-
-    // Helper to get last weekday of month
-    $getLastWeekday = function($year, $month, $weekday) {
-        $last = new DateTime("$year-$month-01");
-        $last->modify('last day of this month');
-        while ((int)$last->format('w') !== $weekday) {
-            $last->modify('-1 day');
-        }
-        return $last->format('Y-m-d');
-    };
-
-    if ((int)$month === 1) {
-        $holidays[$getNthWeekday($year, $month, 1, 3)] = 'Martin Luther King Jr. Day';
-    }
-
-    if ((int)$month === 2) {
-        $holidays[$getNthWeekday($year, $month, 1, 3)] = 'Presidents\' Day';
-    }
-
-    if ((int)$month === 5) {
-        $holidays[$getLastWeekday($year, $month, 1)] = 'Memorial Day';
-    }
-
-    if ((int)$month === 9) {
-        $holidays[$getNthWeekday($year, $month, 1, 1)] = 'Labor Day';
-    }
-
-    if ((int)$month === 10) {
-        $holidays[$getNthWeekday($year, $month, 1, 2)] = 'Columbus Day';
-    }
-
-    if ((int)$month === 11) {
-        $holidays[$getNthWeekday($year, $month, 4, 4)] = 'Thanksgiving';
-    }
-
-    return $holidays;
-}
-
-$holidays = getNationalHolidays($year, $month);
 
 // Calculate calendar grid
 $firstDay = strtotime("$year-$month-01");
@@ -170,143 +104,144 @@ $csrfToken = SecurityHelper::generateCSRFToken();
         <!-- Month Navigation -->
         <div class="card mb-30">
             <div class="card-body" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
-                <a href="?month=<?php echo $month === 1 ? 12 : $month - 1; ?>&year=<?php echo $month === 1 ? $year - 1 : $year; ?>" class="btn btn-secondary btn-sm">
+                <?php
+                    $baseParams = ['month' => $month, 'year' => $year];
+                    if ($calendarId > 0) {
+                        $baseParams['calendar_id'] = $calendarId;
+                    }
+
+                    $prevParams = $baseParams;
+                    $prevParams['month'] = $month === 1 ? 12 : $month - 1;
+                    $prevParams['year'] = $month === 1 ? $year - 1 : $year;
+
+                    $nextParams = $baseParams;
+                    $nextParams['month'] = $month === 12 ? 1 : $month + 1;
+                    $nextParams['year'] = $month === 12 ? $year + 1 : $year;
+                ?>
+
+                <a href="?<?php echo http_build_query($prevParams); ?>" class="btn btn-secondary btn-sm">
                     ← Previous
                 </a>
-                
-                <h3 style="margin: 0; font-size: 1.5rem;">
-                    <?php echo date('F Y', strtotime("$year-$month-01")); ?>
-                </h3>
 
-                <div style="display: flex; gap: 10px; align-items: center;">
-                    <span style="font-size: 0.85rem; color: var(--text-secondary);">Calendar view:</span>
-                    <select id="calendarTypeSelect" style="padding: 6px; border-radius: 5px; border: 1px solid var(--border-color);">
-                        <option value="All">All Calendars</option>
-                        <option value="Personal">Personal</option>
-                        <option value="Work">Work</option>
-                        <option value="Health">Health</option>
-                        <option value="Education">Education</option>
-                    </select>
+                <div style="text-align: center; flex: 1; min-width: 220px;">
+                    <h3 style="margin: 0; font-size: 1.5rem;">
+                        <?php echo date('F Y', strtotime("$year-$month-01")); ?>
+                    </h3>
+                    <div style="font-size: 0.9rem; color: var(--text-secondary);">
+                        Showing: <strong><?php echo $selectedCalendar ? htmlspecialchars($selectedCalendar['name']) : 'All Calendars'; ?></strong>
+                    </div>
                 </div>
-                
-                <a href="?month=<?php echo $month === 12 ? 1 : $month + 1; ?>&year=<?php echo $month === 12 ? $year + 1 : $year; ?>" class="btn btn-secondary btn-sm">
-                    Next →
-                </a>
+
+                <div style="display: flex; gap: 8px; align-items: center;">
+                    <button type="button" class="btn btn-secondary btn-sm" onclick="shareCalendar()">Share</button>
+                    <button type="button" class="btn btn-secondary btn-sm" onclick="openCalendarModal()">Calendars</button>
+                    <a href="?<?php echo http_build_query($nextParams); ?>" class="btn btn-secondary btn-sm">
+                        Next →
+                    </a>
+                </div>
             </div>
         </div>
 
-        <style>
-            .calendar-grid { display: grid; grid-template-columns: repeat(7, minmax(140px, 1fr)); grid-auto-rows: 160px; gap: 1px; background: var(--border-color); }
-            .calendar-header-cell { padding: 12px; background: var(--bg-secondary); font-weight: bold; text-align: center; height: 48px; min-height: 48px; }
-            .calendar-day-cell, .calendar-empty-cell { padding: 10px; min-height: 160px; height: 160px; background: var(--bg-primary); border: 1px solid var(--border-color); border-radius: 5px; cursor: pointer; overflow: hidden; display: flex; flex-direction: column; justify-content: flex-start; max-width: 160px; }
-            .calendar-empty-cell { background: rgba(0,0,0,0.02); cursor: default; }
-            .holiday-badge { margin-top: 6px; color: #c0392b; font-size: 0.72rem; font-weight: 700; }
-            .calendar-event-chip { padding: 2px 5px; margin: 2px 0; border-radius: 3px; font-size: 0.72rem; line-height: 1.1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        </style>
-
-        <div style="display: grid; grid-template-columns: 260px minmax(680px, 1fr) 260px; gap: 20px; align-items: start; margin-top: 30px; min-width: 1200px;">
-            <div style="display: flex; flex-direction: column; gap: 20px;">
-                <div class="card">
-                    <div class="card-body">
-                        <div class="text-muted" style="font-size: 0.9rem; margin-bottom: 8px;">Total Event Colors</div>
-                        <div id="totalEventColorsCount" style="font-size: 2rem; font-weight: bold; color: #42c88a;">0</div>
-                    </div>
-                </div>
-
-                <div class="card">
-                    <div class="card-body">
-                        <h3 style="margin: 0 0 12px 0;">Coming Up Events</h3>
-                        <div id="comingUpList" style="display: flex; flex-direction: column; gap: 8px;"><p class="text-muted">No upcoming events found.</p></div>
-                    </div>
-                </div>
-            </div>
-
-            <div>
-                <div class="card">
-                    <div class="card-body">
-                        <div class="calendar-grid" style="min-height: 100vh;">
-                            <!-- Day headers -->
-                            <?php foreach (['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'] as $day): ?>
-                                <div style="padding: 12px; background: var(--bg-secondary); font-weight: bold; text-align: center;">
-                                    <?php echo $day; ?>
-                                </div>
-                            <?php endforeach; ?>
-
-                            <!-- Empty cells before month starts -->
-                            <?php for ($i = 0; $i < $startingWeek; $i++): ?>
-                                <div class="calendar-empty-cell"></div>
-                            <?php endfor; ?>
-
-                            <!-- Days of month -->
-                            <?php for ($day = 1; $day <= $daysInMonth; $day++): ?>
-                                <?php
-                                    $date = sprintf('%04d-%02d-%02d', $year, $month, $day);
-                                    $dayEvents = $eventsByDate[$date] ?? [];
-                                    $isToday = $date === date('Y-m-d');
-                                ?>
-                                <div class="calendar-day-cell" data-date="<?php echo $date; ?>" style="padding: 12px; background: var(--bg-primary); border: 1px solid var(--border-color); min-height: 160px; border-radius: 5px; cursor: pointer; <?php echo $isToday ? 'border: 2px solid #667eea;' : ''; ?>" onclick="openEventModal('<?php echo $date; ?>')">
-                                    <div style="font-weight: bold; margin-bottom: 8px; color: <?php echo $isToday ? '#667eea' : 'var(--text-primary)'; ?>;">
-                                        <?php echo $day; ?>
-                                    </div>
-                                    <?php if (!empty($holidays[$date])): ?>
-                                        <div class="holiday-badge">🏛️ <?php echo htmlspecialchars($holidays[$date]); ?></div>
-                                    <?php endif; ?>
-
-                                    <?php if (!empty($dayEvents)): ?>
-                                        <div style="font-size: 0.7rem; max-height: 90px; overflow-y: auto;">
-                                            <?php foreach (array_slice($dayEvents, 0, 4) as $event): ?>
-                                                <div class="calendar-event-chip" style="background: <?php echo htmlspecialchars($event['color']); ?>20; border-left: 3px solid <?php echo htmlspecialchars($event['color']); ?>;" title="<?php echo htmlspecialchars($event['title']); ?> - <?php echo $event['event_time'] ?? ''; ?>">
-                                                    <strong><?php echo htmlspecialchars($event['title']); ?></strong>
-                                                    <span style="font-size: 0.65rem; color: #555; margin-left: 4px;">[<?php echo htmlspecialchars($event['calendar_type'] ?? 'Personal'); ?>]</span>
-                                                </div>
-                                            <?php endforeach; ?>
-                                            <?php if (count($dayEvents) > 4): ?>
-                                                <div style="color: #999; font-size: 0.65rem; padding: 2px 4px;">+<?php echo count($dayEvents) - 4; ?> more</div>
-                                            <?php endif; ?>
-                                        </div>
-                                    <?php endif; ?>
-                                </div>
-                            <?php endfor; ?>
-
-                            <?php
-                                $remainingCells = 42 - ($startingWeek + $daysInMonth);
-                                for ($i = 0; $i < $remainingCells; $i++):
-                            ?>
-                                <div class="calendar-empty-cell"></div>
-                            <?php endfor; ?>
+        <!-- Calendar Grid -->
+        <div class="card">
+            <div class="card-body">
+                <div style="display: grid; grid-template-columns: repeat(7, 1fr); gap: 1px; background: var(--border-color);">
+                    <!-- Day headers -->
+                    <?php foreach (['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'] as $day): ?>
+                        <div style="padding: 12px; background: var(--bg-secondary); font-weight: bold; text-align: center;">
+                            <?php echo $day; ?>
                         </div>
+                    <?php endforeach; ?>
+
+                    <!-- Empty cells before month starts -->
+                    <?php for ($i = 0; $i < $startingWeek; $i++): ?>
+                        <div style="padding: 12px; background: rgba(0,0,0,0.02); aspect-ratio: 1; min-height: 0;"></div>
+                    <?php endfor; ?>
+
+                    <!-- Days of month -->
+                    <?php for ($day = 1; $day <= $daysInMonth; $day++): ?>
+                        <?php
+                            $date = sprintf('%04d-%02d-%02d', $year, $month, $day);
+                            $dayEvents = $eventsByDate[$date] ?? [];
+                            $isToday = $date === date('Y-m-d');
+                        ?>
+                        <div style="padding: 12px; background: var(--bg-primary); border: 1px solid var(--border-color); border-radius: 5px; cursor: pointer; aspect-ratio: 1; min-height: 0; display: flex; flex-direction: column; justify-content: space-between; overflow: hidden;
+                                    <?php echo $isToday ? 'border: 2px solid #667eea;' : ''; ?>"
+                             onclick="openEventModal('<?php echo $date; ?>')"
+                        >
+                            <div style="font-weight: bold; margin-bottom: 8px; color: <?php echo $isToday ? '#667eea' : 'var(--text-primary)'; ?>">
+                                <?php echo $day; ?>
+                            </div>
+
+                            <?php if (!empty($dayEvents)): ?>
+                                <div style="font-size: 0.7rem; max-height: 90px; overflow-y: auto;">
+                                    <?php foreach (array_slice($dayEvents, 0, 4) as $event): ?>
+                                        <div style="padding: 4px 6px; margin: 3px 0; background: <?php echo htmlspecialchars($event['color']); ?>20; border-left: 3px solid <?php echo htmlspecialchars($event['color']); ?>; border-radius: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"
+                                             title="<?php echo htmlspecialchars($event['title']); ?> - <?php echo $event['event_time'] ?? ''; ?>">
+                                            <?php echo htmlspecialchars($event['title']); ?>
+                                        </div>
+                                    <?php endforeach; ?>
+                                    <?php if (count($dayEvents) > 4): ?>
+                                        <div style="color: #999; font-size: 0.65rem; padding: 2px 4px;">+<?php echo count($dayEvents) - 4; ?> more</div>
+                                    <?php endif; ?>
+                                </div>
+                            <?php endif; ?>
+                        </div>
+                    <?php endfor; ?>
+
+                    <!-- Empty cells after month ends -->
+                    <?php
+                        $remainingCells = (7 * ceil(($startingWeek + $daysInMonth) / 7)) - ($startingWeek + $daysInMonth);
+                        for ($i = 0; $i < $remainingCells; $i++):
+                    ?>
+                        <div style="padding: 12px; background: rgba(0,0,0,0.02); aspect-ratio: 1; min-height: 0;"></div>
+                    <?php endfor; ?>
+                </div>
+            </div>
+        </div>
+
+        <!-- Quick Stats -->
+        <div class="row" style="margin-top: 30px;">
+            <div class="card">
+                <div class="card-body">
+                    <div class="text-muted" style="font-size: 0.9rem; margin-bottom: 8px;">Events This Month</div>
+                    <div style="font-size: 2rem; font-weight: bold; color: #f39c12;">
+                        <?php echo count($events); ?>
                     </div>
                 </div>
             </div>
 
-            <div style="display: flex; flex-direction: column; gap: 20px;">
-                <div class="card">
-                    <div class="card-body">
-                        <div class="text-muted" style="font-size: 0.9rem; margin-bottom: 8px;">Events This Month</div>
-                        <div id="eventsThisMonthCount" style="font-size: 2rem; font-weight: bold; color: #f39c12;">0</div>
+            <div class="card">
+                <div class="card-body">
+                    <div class="text-muted" style="font-size: 0.9rem; margin-bottom: 8px;">Days with Events</div>
+                    <div style="font-size: 2rem; font-weight: bold; color: #667eea;">
+                        <?php echo count($eventsByDate); ?>
                     </div>
                 </div>
+            </div>
 
-                <div class="card">
-                    <div class="card-body">
-                        <div class="text-muted" style="font-size: 0.9rem; margin-bottom: 8px;">Days with Events</div>
-                        <div id="daysWithEventsCount" style="font-size: 2rem; font-weight: bold; color: #667eea;">0</div>
+            <div class="card">
+                <div class="card-body">
+                    <div class="text-muted" style="font-size: 0.9rem; margin-bottom: 8px;">Total Event Colors</div>
+                    <div style="font-size: 2rem; font-weight: bold; color: #42c88a;">
+                        <?php echo count(array_unique(array_column($events, 'color'))); ?>
                     </div>
                 </div>
             </div>
         </div>
+    </div>
 
     <!-- Event Modal -->
     <div id="eventModal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center;">
         <div style="background: var(--bg-primary); padding: 30px; border-radius: 10px; max-width: 500px; width: 90%; max-height: 90vh; overflow-y: auto; box-shadow: 0 10px 40px rgba(0,0,0,0.3);">
             <h2 style="margin-top: 0;">Add Event</h2>
             <p style="color: var(--text-secondary);">Selected date: <strong id="selectedDate"></strong></p>
-            <p id="holidayLabel" style="color: #c0392b; font-weight: 700; margin-top: 5px; display: none;"></p>
 
             <form id="eventForm" style="display: flex; flex-direction: column; gap: 15px;">
                 <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrfToken); ?>">
                 <input type="hidden" name="id" id="eventId">
                 <input type="hidden" name="date" id="eventDate">
+                <input type="hidden" name="calendar_id" id="eventCalendarId" value="<?php echo (int)$calendarId; ?>">
 
                 <div>
                     <label for="eventTitle" style="display: block; margin-bottom: 5px; font-weight: bold;">Event Title *</label>
@@ -321,16 +256,6 @@ $csrfToken = SecurityHelper::generateCSRFToken();
                 <div>
                     <label for="eventDescription" style="display: block; margin-bottom: 5px; font-weight: bold;">Description (Optional)</label>
                     <textarea id="eventDescription" name="description" placeholder="Add details..." maxlength="500" rows="3" style="width: 100%; padding: 10px; border: 1px solid var(--border-color); border-radius: 5px; background: var(--bg-secondary); font-family: Arial, sans-serif; resize: vertical;"></textarea>
-                </div>
-
-                <div>
-                    <label for="eventCategory" style="display: block; margin-bottom: 5px; font-weight: bold;">Category</label>
-                    <select id="eventCategory" name="calendar_type" style="width: 100%; padding: 10px; border: 1px solid var(--border-color); border-radius: 5px; background: var(--bg-secondary);">
-                        <option value="Personal">Personal</option>
-                        <option value="Work">Work</option>
-                        <option value="Health">Health</option>
-                        <option value="Education">Education</option>
-                    </select>
                 </div>
 
                 <div>
@@ -359,107 +284,58 @@ $csrfToken = SecurityHelper::generateCSRFToken();
         </div>
     </div>
 
-    <!-- Session Detail Modal -->
-    <div id="sessionModal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 1100; align-items: center; justify-content: center;">
-        <div style="background: var(--bg-primary); padding: 20px; border-radius: 10px; max-width: 560px; width: 92%; max-height: 90vh; overflow-y: auto; box-shadow: 0 10px 40px rgba(0,0,0,0.3);">
-            <h3 id="sessionModalTitle">Session Details</h3>
-            <p id="sessionMeta" style="color: var(--text-secondary);"></p>
+    <!-- Calendar management modal -->
+    <div id="calendarModal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center;">
+        <div style="background: var(--bg-primary); padding: 30px; border-radius: 10px; max-width: 520px; width: 90%; max-height: 90vh; overflow-y: auto; box-shadow: 0 10px 40px rgba(0,0,0,0.3);">
+            <h2 style="margin-top: 0;">Manage Calendars</h2>
+            <p style="color: var(--text-secondary); margin-bottom: 10px;">Select a calendar to view, or add a new one.</p>
 
-            <div id="sessionDetails" style="margin-top: 8px; white-space: pre-wrap; color: var(--text-primary);"></div>
-
-            <form id="sessionEditForm" style="display:none; flex-direction: column; gap: 10px; margin-top: 12px;">
-                <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrfToken); ?>">
-                <input type="hidden" id="sessId" name="id">
-
-                <label>Project
-                    <select id="sessProject" name="project_id" style="width:100%; padding:8px; margin-top:4px;"></select>
-                </label>
-
-                <label>Start Time
-                    <input type="datetime-local" id="sessStart" name="start_time" style="width:100%; padding:8px; margin-top:4px;">
-                </label>
-
-                <label>End Time
-                    <input type="datetime-local" id="sessEnd" name="end_time" style="width:100%; padding:8px; margin-top:4px;">
-                </label>
-
-                <label>Description
-                    <textarea id="sessDesc" name="description" rows="3" style="width:100%; padding:8px; margin-top:4px;"></textarea>
-                </label>
-
-                <div style="display:flex; gap:10px; margin-top:8px;">
-                    <button type="button" id="saveSessionBtn" class="btn btn-primary">Save</button>
-                    <button type="button" id="cancelEditSessionBtn" class="btn btn-secondary">Cancel</button>
-                    <button type="button" id="deleteSessionBtn" class="btn btn-danger" style="margin-left:auto;">Delete</button>
-                </div>
-            </form>
-
-            <div style="margin-top:12px; display:flex; gap:8px;">
-                <button type="button" id="editSessionBtn" class="btn btn-primary">Edit</button>
-                <button type="button" id="closeSessionModalBtn" class="btn btn-secondary">Close</button>
+            <div style="display: flex; gap: 10px; align-items: center; margin-bottom: 20px;">
+                <button type="button" class="btn btn-primary" onclick="showCalendarForm()">+ Add Calendar</button>
+                <button type="button" class="btn btn-secondary" onclick="closeCalendarModal()">Close</button>
             </div>
+
+            <div id="calendarForm" style="display: none; margin-bottom: 20px;">
+                <div style="margin-bottom: 12px;">
+                    <label for="calendarName" style="display: block; margin-bottom: 5px; font-weight: bold;">Name</label>
+                    <input type="text" id="calendarName" style="width: 100%; padding: 10px; border: 1px solid var(--border-color); border-radius: 5px; background: var(--bg-secondary);">
+                </div>
+                <div style="margin-bottom: 12px;">
+                    <label style="display: block; margin-bottom: 5px; font-weight: bold;">Color</label>
+                    <input type="color" id="calendarColor" value="#667eea" style="width: 100%; height: 40px; border: 1px solid var(--border-color); border-radius: 5px; padding: 0;">
+                </div>
+                <div style="display: flex; gap: 10px;">
+                    <button type="button" class="btn btn-primary" onclick="saveCalendar()">Save</button>
+                    <button type="button" class="btn btn-secondary" onclick="hideCalendarForm()">Cancel</button>
+                </div>
+                <input type="hidden" id="calendarId" value="">
+            </div>
+
+            <div id="calendarList"></div>
         </div>
     </div>
 
     <script>
+        const currentCalendarId = <?php echo (int)$calendarId; ?>;
+        const currentMonth = <?php echo $month; ?>;
+        const currentYear = <?php echo $year; ?>;
+        let calendarListData = <?php echo json_encode($calendars); ?>;
+
         let currentSelectedDate = null;
-        const HOLIDAYS = <?php echo json_encode($holidays); ?>;
-        const calendarTypeSelect = document.getElementById('calendarTypeSelect');
-        let selectedCalendarType = calendarTypeSelect ? calendarTypeSelect.value : 'All';
-
-        if (calendarTypeSelect) {
-            calendarTypeSelect.addEventListener('change', () => {
-                selectedCalendarType = calendarTypeSelect.value;
-                refreshCalendarData();
-                if (currentSelectedDate) loadEventsForDate(currentSelectedDate);
-            });
-        }
-
-        function ensureCurrentMonthYearOnReload() {
-            const now = new Date();
-            const currentMonth = now.getMonth() + 1;
-            const currentYear = now.getFullYear();
-            const params = new URLSearchParams(window.location.search);
-            const seenMonth = Number(params.get('month')) || null;
-            const seenYear = Number(params.get('year')) || null;
-
-            const navigation = performance.getEntriesByType('navigation')[0];
-            const isReload = (navigation && navigation.type === 'reload') || (performance.navigation && performance.navigation.type === 1);
-
-            if (isReload && (seenMonth !== currentMonth || seenYear !== currentYear)) {
-                params.set('month', String(currentMonth));
-                params.set('year', String(currentYear));
-                window.location.replace(window.location.pathname + '?' + params.toString());
-            }
-        }
-
-        ensureCurrentMonthYearOnReload();
-
-        // initial data load
-        currentSelectedDate = '<?php echo date('Y-m-d'); ?>';
-        refreshCalendarData();
-        loadEventsForDate(currentSelectedDate);
 
         function openEventModal(date) {
             currentSelectedDate = date;
+            document.getElementById('eventDate').value = date;
+            document.getElementById('selectedDate').textContent = new Date(date + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
             document.getElementById('eventModal').style.display = 'flex';
             document.getElementById('eventForm').reset();
             document.getElementById('eventId').value = '';
-            document.getElementById('eventDate').value = date;
-            document.getElementById('eventCategory').value = 'Personal';
+            document.getElementById('deleteBtn').style.display = 'none';
+            document.getElementById('eventCalendarId').value = currentCalendarId;
+
             // Set default color
             document.querySelector('input[name="color"][value="#667eea"]').checked = true;
-
-            // Show holiday if any
-            const holidayLabel = document.getElementById('holidayLabel');
-            if (HOLIDAYS[date]) {
-                holidayLabel.textContent = `National Holiday: ${HOLIDAYS[date]}`;
-                holidayLabel.style.display = 'block';
-            } else {
-                holidayLabel.textContent = '';
-                holidayLabel.style.display = 'none';
-            }
-
+            
             loadEventsForDate(date);
         }
 
@@ -469,315 +345,41 @@ $csrfToken = SecurityHelper::generateCSRFToken();
         }
 
         function loadEventsForDate(date) {
-            // Fetch calendar events and sessions for this date and merge
-            Promise.all([
-                fetch(`${APP_BASE_URL}/api/events/get.php?from=${date}&to=${date}`).then(r => r.json()),
-                fetch(`${APP_BASE_URL}/api/sessions/get.php?date=${date}`).then(r => r.json())
-            ]).then(([eventsResp, sessionsResp]) => {
-                let html = '<h4 style="margin-top: 0;">Events on this day:</h4>';
-                if (HOLIDAYS[date]) {
-                    html += `<div class="holiday-badge" style="margin-bottom: 10px;">🏛️ ${HOLIDAYS[date]}</div>`;
-                }
+            let url = `/clockit/api/events/get.php?from=${date}&to=${date}`;
+            if (currentCalendarId && currentCalendarId > 0) {
+                url += `&calendar_id=${currentCalendarId}`;
+            }
 
-                const eventsArr = (eventsResp.data || []) || [];
-                const sessionsArr = (sessionsResp.data || sessionsResp.sessions || []) || [];
-
-                // Normalize sessions to event-like objects
-                const mappedSessions = sessionsArr.map(s => ({
-                    id: 'session_' + s.id,
-                    title: (s.project_name ? s.project_name + ' - Session' : 'Session'),
-                    description: s.description || '',
-                    event_time: s.start_time ? s.start_time.split(' ')[1].slice(0,5) : '',
-                    color: s.project_color || '#42c88a',
-                    calendar_type: 'Session'
-                }));
-
-                const combined = eventsArr.concat(mappedSessions).filter(event => selectedCalendarType === 'All' || (event.calendar_type || 'Personal') === selectedCalendarType);
-
-                if (combined.length > 0) {
+            fetch(url)
+                .then(r => r.json())
+                .then(data => {
+                    let html = '<h4 style="margin-top: 0;">Events on this day:</h4>';
+                    if (data.data && data.data.length > 0) {
                         html += '<div style="display: flex; flex-direction: column; gap: 10px;">';
-                        combined.forEach(event => {
-                            // Sessions should not open the event edit modal; show details only
-                            if ((event.calendar_type || '') === 'Session') {
-                                html += `
-                                    <div style="padding: 10px; background: ${event.color}20; border-left: 3px solid ${event.color}; border-radius: 3px;">
-                                        <div style="display: flex; justify-content: space-between; align-items: center;">
-                                            <div style="font-weight: bold;">${event.title}</div>
-                                            <span style="font-size: 0.7rem; color: #555; padding: 1px 5px; background: rgba(0,0,0,0.05); border-radius: 3px;">Session</span>
-                                        </div>
-                                        ${event.event_time ? '<div style="font-size: 0.8rem; color: var(--text-secondary);">🕐 ' + event.event_time + '</div>' : ''}
-                                        ${event.description ? '<div style="font-size: 0.8rem; color: var(--text-secondary); margin-top: 3px;">' + event.description + '</div>' : ''}
-                                    </div>
-                                `;
-                            } else {
-                                html += `
-                                    <div onclick="editEvent(${event.id}, '${(event.title||'').replace(/'/g, "\\'")}', '${(event.description || '').replace(/'/g, "\\'")}', '${event.event_time || ''}', '${event.color}', '${event.calendar_type || 'Personal'}')" 
-                                         style="padding: 10px; background: ${event.color}20; border-left: 3px solid ${event.color}; border-radius: 3px; cursor: pointer; transition: all 0.2s;">
-                                        <div style="display: flex; justify-content: space-between; align-items: center;">
-                                            <div style="font-weight: bold;">${event.title}</div>
-                                            <span style="font-size: 0.7rem; color: #555; padding: 1px 5px; background: rgba(0,0,0,0.05); border-radius: 3px;">${event.calendar_type || 'Personal'}</span>
-                                        </div>
-                                        ${event.event_time ? '<div style="font-size: 0.8rem; color: var(--text-secondary);">🕐 ' + event.event_time + '</div>' : ''}
-                                        ${event.description ? '<div style="font-size: 0.8rem; color: var(--text-secondary); margin-top: 3px;">' + event.description + '</div>' : ''}
-                                    </div>
-                                `;
-                            }
+                        data.data.forEach(event => {
+                            html += `
+                                <div onclick="editEvent(${event.id}, '${event.title.replace(/'/g, "\\'")}', '${(event.description || '').replace(/'/g, "\\'")}', '${event.event_time || ''}', '${event.color}')" 
+                                     style="padding: 10px; background: ${event.color}20; border-left: 3px solid ${event.color}; border-radius: 3px; cursor: pointer; transition: all 0.2s;">
+                                    <div style="font-weight: bold;">${event.title}</div>
+                                    ${event.event_time ? '<div style="font-size: 0.8rem; color: var(--text-secondary);">🕐 ' + event.event_time + '</div>' : ''}
+                                    ${event.description ? '<div style="font-size: 0.8rem; color: var(--text-secondary); margin-top: 3px;">' + event.description + '</div>' : ''}
+                                </div>
+                            `;
                         });
                         html += '</div>';
                     } else {
-                        html += '<p style="color: var(--text-secondary);">No events or sessions scheduled for this day.</p>';
+                        html += '<p style="color: var(--text-secondary);">No events scheduled for this day.</p>';
                     }
                     document.getElementById('eventsList').innerHTML = html;
-                            });
-        }
-
-                    // Open session detail modal
-                    async function openSessionDetail(sessionId) {
-                        try {
-                            const resp = await fetch(`${APP_BASE_URL}/api/sessions/detail.php?id=${sessionId}`);
-                            const data = await resp.json();
-                            if (!data.success) {
-                                Notification.show(data.message || 'Failed to load session', 'error');
-                                return;
-                            }
-
-                            const s = data.data;
-                            document.getElementById('sessionModalTitle').textContent = s.project_name ? (s.project_name + ' — Session') : 'Session Details';
-                            document.getElementById('sessionMeta').textContent = `${s.start_time} — ${s.end_time} (${s.duration_seconds ? Math.floor(s.duration_seconds/60) + ' min' : 'unknown'})`;
-                            document.getElementById('sessionDetails').textContent = s.description || 'No description.';
-
-                            // populate edit form
-                            document.getElementById('sessId').value = s.id;
-                            // load projects into select
-                            const projSelect = document.getElementById('sessProject');
-                            projSelect.innerHTML = '<option value="">(No project)</option>';
-                            const projectsResp = await fetch(`${APP_BASE_URL}/api/projects/get.php`);
-                            const projectsData = await projectsResp.json();
-                            if (projectsData.success && Array.isArray(projectsData.data)) {
-                                projectsData.data.forEach(p => {
-                                    const opt = document.createElement('option');
-                                    opt.value = p.id;
-                                    opt.textContent = p.name;
-                                    projSelect.appendChild(opt);
-                                });
-                            }
-                            if (s.project_id) projSelect.value = s.project_id;
-                            document.getElementById('sessStart').value = s.start_time ? s.start_time.replace(' ', 'T') : '';
-                            document.getElementById('sessEnd').value = s.end_time ? s.end_time.replace(' ', 'T') : '';
-                            document.getElementById('sessDesc').value = s.description || '';
-
-                            document.getElementById('sessionModal').style.display = 'flex';
-                            document.getElementById('sessionEditForm').style.display = 'none';
-                            document.getElementById('editSessionBtn').style.display = 'inline-block';
-                        } catch (err) {
-                            console.error(err);
-                            Notification.show('Error loading session', 'error');
-                        }
-                    }
-
-                    document.getElementById('closeSessionModalBtn').addEventListener('click', () => {
-                        document.getElementById('sessionModal').style.display = 'none';
-                    });
-
-                    document.getElementById('editSessionBtn').addEventListener('click', () => {
-                        document.getElementById('sessionEditForm').style.display = 'flex';
-                        document.getElementById('editSessionBtn').style.display = 'none';
-                    });
-
-                    document.getElementById('cancelEditSessionBtn').addEventListener('click', () => {
-                        document.getElementById('sessionEditForm').style.display = 'none';
-                        document.getElementById('editSessionBtn').style.display = 'inline-block';
-                    });
-
-                    document.getElementById('saveSessionBtn').addEventListener('click', async () => {
-                        const form = document.getElementById('sessionEditForm');
-                        const formData = new FormData(form);
-                        try {
-                            const resp = await fetch(`${APP_BASE_URL}/api/sessions/update.php`, { method: 'POST', body: formData });
-                            const data = await resp.json();
-                            if (data.success) {
-                                Notification.show('Session updated', 'success');
-                                document.getElementById('sessionModal').style.display = 'none';
-                                await refreshCalendarData();
-                                loadEventsForDate(currentSelectedDate);
-                            } else {
-                                Notification.show(data.message || 'Failed to update', 'error');
-                            }
-                        } catch (err) {
-                            Notification.show('Error: ' + err.message, 'error');
-                        }
-                    });
-
-                    document.getElementById('deleteSessionBtn').addEventListener('click', async () => {
-                        if (!confirm('Delete this session?')) return;
-                        const id = document.getElementById('sessId').value;
-                        const formData = new FormData();
-                        formData.append('id', id);
-                        formData.append('csrf_token', document.querySelector('input[name="csrf_token"]').value);
-
-                        try {
-                            const resp = await fetch(`${APP_BASE_URL}/api/sessions/delete.php`, { method: 'POST', body: formData });
-                            const data = await resp.json();
-                            if (data.success) {
-                                Notification.show('Session deleted', 'success');
-                                document.getElementById('sessionModal').style.display = 'none';
-                                await refreshCalendarData();
-                                loadEventsForDate(currentSelectedDate);
-                            } else {
-                                Notification.show(data.message || 'Failed to delete', 'error');
-                            }
-                        } catch (err) {
-                            Notification.show('Error: ' + err.message, 'error');
-                        }
-                    });
-
-        async function refreshCalendarData() {
-            const fromDate = '<?php echo $monthStart; ?>';
-            const toDate = '<?php echo $monthEnd; ?>';
-            try {
-                // Fetch calendar events and sessions in parallel and merge
-                const [eventsResp, sessionsResp] = await Promise.all([
-                    fetch(`${APP_BASE_URL}/api/events/get.php?from=${fromDate}&to=${toDate}`).then(r => r.json()),
-                    fetch(`${APP_BASE_URL}/api/sessions/get.php?from=${fromDate}&to=${toDate}`).then(r => r.json())
-                ]);
-
-                const eventsArr = (eventsResp.data || []) || [];
-                const sessionsArr = (sessionsResp.data || sessionsResp.sessions || []) || [];
-
-                const mappedSessions = sessionsArr.map(s => ({
-                    id: 'session_' + s.id,
-                    title: (s.project_name ? s.project_name + ' - Session' : 'Session'),
-                    description: s.description || '',
-                    event_date: s.start_time ? s.start_time.split(' ')[0] : '',
-                    event_time: s.start_time ? s.start_time.split(' ')[1].slice(0,5) : '',
-                    color: s.project_color || '#42c88a',
-                    calendar_type: 'Session'
-                }));
-
-                const allEvents = eventsArr.concat(mappedSessions);
-                const filteredEvents = allEvents.filter(event => selectedCalendarType === 'All' || (event.calendar_type || 'Personal') === selectedCalendarType);
-
-                const eventsByDate = {};
-                filteredEvents.forEach(event => {
-                    if (!eventsByDate[event.event_date]) eventsByDate[event.event_date] = [];
-                    eventsByDate[event.event_date].push(event);
                 });
-
-                document.querySelectorAll('.calendar-day-cell').forEach(cell => {
-                    const date = cell.dataset.date;
-                    const events = eventsByDate[date] || [];
-
-                        const existingTitle = cell.querySelector('div');
-                        const lines = [];
-                        if (existingTitle) {
-                            const d = existingTitle.textContent;
-                        }
-
-                        const existingHoliday = cell.querySelector('.holiday-badge');
-                        if (HOLIDAYS[date]) {
-                            if (!existingHoliday) {
-                                const h = document.createElement('div');
-                                h.className = 'holiday-badge';
-                                h.textContent = `🏛️ ${HOLIDAYS[date]}`;
-                                h.style.marginTop = '4px';
-                                cell.insertBefore(h, cell.children[1] || null);
-                            }
-                        } else if (existingHoliday) {
-                            existingHoliday.remove();
-                        }
-
-                        const eventContainer = cell.querySelector('.calendar-events-list');
-                        if (eventContainer) {
-                            eventContainer.remove();
-                        }
-
-                        if (events.length > 0) {
-                            const container = document.createElement('div');
-                            container.className = 'calendar-events-list';
-                            container.style.marginTop = '6px';
-                            container.style.display = 'flex';
-                            container.style.flexDirection = 'column';
-                            container.style.gap = '2px';
-                            events.slice(0, 4).forEach(event => {
-                                const slot = document.createElement('div');
-                                slot.className = 'calendar-event-chip';
-                                slot.textContent = event.title;
-                                slot.title = `${event.title} ${event.event_time || ''}`;
-                                slot.style.background = `${event.color}20`;
-                                slot.style.borderLeft = `3px solid ${event.color}`;
-                                container.appendChild(slot);
-                            });
-                            if (events.length > 4) {
-                                const extra = document.createElement('div');
-                                extra.style.color = '#999';
-                                extra.style.fontSize = '0.65rem';
-                                extra.textContent = `+${events.length - 4} more`;
-                                container.appendChild(extra);
-                            }
-                            cell.appendChild(container);
-                        }
-                    });
-
-                    updateStats(filteredEvents);
-                }
-            } catch (err) {
-                console.error('Failed to refresh calendar data:', err);
-            }
         }
 
-        function updateStats(events) {
-            const eventsThisMonthCount = document.getElementById('eventsThisMonthCount');
-            const daysWithEventsCount = document.getElementById('daysWithEventsCount');
-            const totalEventColorsCount = document.getElementById('totalEventColorsCount');
-            const comingUpList = document.getElementById('comingUpList');
-
-            if (eventsThisMonthCount) {
-                eventsThisMonthCount.textContent = events.length;
-            }
-
-            const daysWithEvents = new Set(events.map(e => e.event_date));
-            if (daysWithEventsCount) {
-                daysWithEventsCount.textContent = daysWithEvents.size;
-            }
-
-            const colors = new Set(events.map(e => e.color || '#667eea'));
-            if (totalEventColorsCount) {
-                totalEventColorsCount.textContent = colors.size;
-            }
-
-            if (comingUpList) {
-                const today = new Date().toISOString().slice(0, 10);
-                const upcoming = events
-                    .filter(e => e.event_date >= today)
-                    .sort((a, b) => {
-                        if (a.event_date !== b.event_date) return a.event_date.localeCompare(b.event_date);
-                        return (a.event_time || '').localeCompare(b.event_time || '');
-                    })
-                    .slice(0, 5);
-
-                if (upcoming.length === 0) {
-                    comingUpList.innerHTML = '<p class="text-muted">No upcoming events found.</p>';
-                } else {
-                    comingUpList.innerHTML = '';
-                    upcoming.forEach(event => {
-                        const card = document.createElement('div');
-                        card.style.padding = '8px';
-                        card.style.border = '1px solid var(--border-color)';
-                        card.style.borderRadius = '5px';
-                        card.style.background = 'var(--bg-secondary)';
-                        card.innerHTML = `<strong>${event.event_date} ${event.event_time || 'All day'}</strong><br>${event.title} [${event.calendar_type || 'Personal'}]`;
-                        comingUpList.appendChild(card);
-                    });
-                }
-            }
-        }
-
-        function editEvent(id, title, description, time, color, category) {
+        function editEvent(id, title, description, time, color) {
             document.getElementById('eventId').value = id;
             document.getElementById('eventTitle').value = title;
             document.getElementById('eventDescription').value = description;
             document.getElementById('eventTime').value = time;
-            document.getElementById('eventCategory').value = category || 'Personal';
+            document.getElementById('eventCalendarId').value = currentCalendarId;
             document.querySelector(`input[name="color"][value="${color}"]`).checked = true;
             document.getElementById('deleteBtn').style.display = 'block';
             document.querySelector('#eventForm button[type="submit"]').textContent = 'Update Event';
@@ -792,7 +394,7 @@ $csrfToken = SecurityHelper::generateCSRFToken();
             const formData = new FormData(e.target);
             
             try {
-                const response = await fetch(`${APP_BASE_URL}/api/events/save.php`, {
+                const response = await fetch('/clockit/api/events/save.php', {
                     method: 'POST',
                     body: formData
                 });
@@ -805,10 +407,8 @@ $csrfToken = SecurityHelper::generateCSRFToken();
                     document.getElementById('deleteBtn').style.display = 'none';
                     document.querySelector('#eventForm button[type="submit"]').textContent = 'Save Event';
                     
-                    // Refresh day and calendar in place
-                    await refreshCalendarData();
+                    // Reload events and close modal
                     loadEventsForDate(currentSelectedDate);
-                    
                     setTimeout(() => closeEventModal(), 800);
                 } else {
                     Notification.show(data.message || 'Failed to save event', 'error');
@@ -827,7 +427,7 @@ $csrfToken = SecurityHelper::generateCSRFToken();
             formData.append('csrf_token', document.querySelector('input[name="csrf_token"]').value);
 
             try {
-                const response = await fetch(`${APP_BASE_URL}/api/events/delete.php`, {
+                const response = await fetch('/clockit/api/events/delete.php', {
                     method: 'POST',
                     body: formData
                 });
@@ -835,7 +435,6 @@ $csrfToken = SecurityHelper::generateCSRFToken();
 
                 if (data.success) {
                     Notification.show('Event deleted successfully!', 'success');
-                    await refreshCalendarData();
                     loadEventsForDate(currentSelectedDate);
                     setTimeout(() => closeEventModal(), 800);
                 } else {
@@ -850,6 +449,184 @@ $csrfToken = SecurityHelper::generateCSRFToken();
         document.getElementById('eventModal').addEventListener('click', (e) => {
             if (e.target.id === 'eventModal') closeEventModal();
         });
+
+        function shareCalendar() {
+            const url = window.location.href;
+            Utils.copyToClipboard(url);
+        }
+
+        function openCalendarModal() {
+            document.getElementById('calendarModal').style.display = 'flex';
+            renderCalendarList();
+        }
+
+        function closeCalendarModal() {
+            document.getElementById('calendarModal').style.display = 'none';
+            hideCalendarForm();
+        }
+
+        function renderCalendarList() {
+            const list = document.getElementById('calendarList');
+            list.innerHTML = '';
+
+            // Option: show all calendars
+            const allEntry = document.createElement('div');
+            allEntry.style.display = 'flex';
+            allEntry.style.justifyContent = 'space-between';
+            allEntry.style.alignItems = 'center';
+            allEntry.style.padding = '10px';
+            allEntry.style.borderBottom = '1px solid var(--border-color)';
+            allEntry.style.cursor = 'pointer';
+            allEntry.innerHTML = `<div style="display: flex; align-items: center; gap: 10px;"><span style="width: 12px; height: 12px; background: #999; border-radius: 50%; display: inline-block;"></span><strong>All Calendars</strong></div>`;
+            allEntry.addEventListener('click', () => selectCalendar(0));
+            list.appendChild(allEntry);
+
+            calendarListData.forEach(cal => {
+                const row = document.createElement('div');
+                row.style.display = 'flex';
+                row.style.justifyContent = 'space-between';
+                row.style.alignItems = 'center';
+                row.style.padding = '10px';
+                row.style.borderBottom = '1px solid var(--border-color)';
+
+                const left = document.createElement('div');
+                left.style.display = 'flex';
+                left.style.alignItems = 'center';
+                left.style.gap = '10px';
+                left.style.cursor = 'pointer';
+                left.innerHTML = `
+                    <span style="width: 12px; height: 12px; background: ${cal.color}; border-radius: 50%; display: inline-block;"></span>
+                    <span>${cal.name}</span>
+                `;
+                left.addEventListener('click', () => selectCalendar(cal.id));
+
+                const actions = document.createElement('div');
+                actions.style.display = 'flex';
+                actions.style.gap = '8px';
+
+                const editBtn = document.createElement('button');
+                editBtn.type = 'button';
+                editBtn.className = 'btn btn-secondary btn-sm';
+                editBtn.textContent = 'Edit';
+                editBtn.addEventListener('click', () => editCalendar(cal));
+
+                const deleteBtn = document.createElement('button');
+                deleteBtn.type = 'button';
+                deleteBtn.className = 'btn btn-danger btn-sm';
+                deleteBtn.textContent = 'Delete';
+                deleteBtn.addEventListener('click', () => deleteCalendar(cal.id));
+
+                actions.appendChild(editBtn);
+                actions.appendChild(deleteBtn);
+
+                row.appendChild(left);
+                row.appendChild(actions);
+                list.appendChild(row);
+            });
+        }
+
+        function showCalendarForm(calendar = null) {
+            document.getElementById('calendarForm').style.display = 'block';
+            document.getElementById('calendarName').value = calendar ? calendar.name : '';
+            document.getElementById('calendarColor').value = calendar ? calendar.color : '#667eea';
+            document.getElementById('calendarId').value = calendar ? calendar.id : '';
+        }
+
+        function hideCalendarForm() {
+            document.getElementById('calendarForm').style.display = 'none';
+            document.getElementById('calendarName').value = '';
+            document.getElementById('calendarColor').value = '#667eea';
+            document.getElementById('calendarId').value = '';
+        }
+
+        async function saveCalendar() {
+            const name = document.getElementById('calendarName').value.trim();
+            const color = document.getElementById('calendarColor').value;
+            const id = document.getElementById('calendarId').value;
+
+            if (!name) {
+                Notification.error('Calendar name is required');
+                return;
+            }
+
+            const formData = new FormData();
+            if (id) formData.append('id', id);
+            formData.append('name', name);
+            formData.append('color', color);
+            formData.append('csrf_token', document.querySelector('input[name="csrf_token"]').value);
+
+            try {
+                const response = await fetch('/clockit/api/calendars/save.php', {
+                    method: 'POST',
+                    body: formData
+                });
+                const data = await response.json();
+
+                if (data.success) {
+                    Notification.success(data.message || 'Calendar saved', 2000);
+                    hideCalendarForm();
+                    await reloadCalendars();
+                } else {
+                    Notification.error(data.message || 'Failed to save calendar');
+                }
+            } catch (err) {
+                Notification.error('Error: ' + err.message);
+            }
+        }
+
+        async function deleteCalendar(id) {
+            if (!confirm('Delete this calendar? Events will not be removed.')) return;
+
+            const formData = new FormData();
+            formData.append('id', id);
+            formData.append('csrf_token', document.querySelector('input[name="csrf_token"]').value);
+
+            try {
+                const response = await fetch('/clockit/api/calendars/delete.php', {
+                    method: 'POST',
+                    body: formData
+                });
+                const data = await response.json();
+
+                if (data.success) {
+                    Notification.success(data.message || 'Calendar deleted', 2000);
+                    await reloadCalendars();
+                } else {
+                    Notification.error(data.message || 'Failed to delete calendar');
+                }
+            } catch (err) {
+                Notification.error('Error: ' + err.message);
+            }
+        }
+
+        async function reloadCalendars() {
+            try {
+                const response = await fetch('/clockit/api/calendars/get.php');
+                const data = await response.json();
+                if (data.success) {
+                    window.calendarListData = data.data || [];
+                    renderCalendarList();
+                }
+            } catch (err) {
+                console.error(err);
+            }
+        }
+
+        function editCalendar(calendar) {
+            showCalendarForm(calendar);
+        }
+
+        function selectCalendar(id) {
+            const params = new URLSearchParams(window.location.search);
+            if (id && id > 0) {
+                params.set('calendar_id', id);
+            } else {
+                params.delete('calendar_id');
+            }
+            params.set('month', currentMonth);
+            params.set('year', currentYear);
+            window.location.search = params.toString();
+        }
     </script>
 
     <?php HTMLHelper::renderFooter(); ?>
