@@ -427,34 +427,63 @@ $csrfToken = SecurityHelper::generateCSRFToken();
         }
 
         function loadEventsForDate(date) {
-            fetch(`${APP_BASE_URL}/api/events/get.php?from=${date}&to=${date}`)
-                .then(r => r.json())
-                .then(data => {
-                    let html = '<h4 style="margin-top: 0;">Events on this day:</h4>';
-                    if (HOLIDAYS[date]) {
-                        html += `<div class="holiday-badge" style="margin-bottom: 10px;">🏛️ ${HOLIDAYS[date]}</div>`;
-                    }
+            // Fetch calendar events and sessions for this date and merge
+            Promise.all([
+                fetch(`${APP_BASE_URL}/api/events/get.php?from=${date}&to=${date}`).then(r => r.json()),
+                fetch(`${APP_BASE_URL}/api/sessions/get.php?date=${date}`).then(r => r.json())
+            ]).then(([eventsResp, sessionsResp]) => {
+                let html = '<h4 style="margin-top: 0;">Events on this day:</h4>';
+                if (HOLIDAYS[date]) {
+                    html += `<div class="holiday-badge" style="margin-bottom: 10px;">🏛️ ${HOLIDAYS[date]}</div>`;
+                }
 
-                    const events = (data.data || []).filter(event => selectedCalendarType === 'All' || (event.calendar_type || 'Personal') === selectedCalendarType);
+                const eventsArr = (eventsResp.data || []) || [];
+                const sessionsArr = (sessionsResp.data || sessionsResp.sessions || []) || [];
 
-                    if (events.length > 0) {
+                // Normalize sessions to event-like objects
+                const mappedSessions = sessionsArr.map(s => ({
+                    id: 'session_' + s.id,
+                    title: (s.project_name ? s.project_name + ' - Session' : 'Session'),
+                    description: s.description || '',
+                    event_time: s.start_time ? s.start_time.split(' ')[1].slice(0,5) : '',
+                    color: s.project_color || '#42c88a',
+                    calendar_type: 'Session'
+                }));
+
+                const combined = eventsArr.concat(mappedSessions).filter(event => selectedCalendarType === 'All' || (event.calendar_type || 'Personal') === selectedCalendarType);
+
+                if (combined.length > 0) {
                         html += '<div style="display: flex; flex-direction: column; gap: 10px;">';
-                        events.forEach(event => {
-                            html += `
-                                <div onclick="editEvent(${event.id}, '${event.title.replace(/'/g, "\\'")}', '${(event.description || '').replace(/'/g, "\\'")}', '${event.event_time || ''}', '${event.color}', '${event.calendar_type || 'Personal'}')" 
-                                     style="padding: 10px; background: ${event.color}20; border-left: 3px solid ${event.color}; border-radius: 3px; cursor: pointer; transition: all 0.2s;">
-                                    <div style="display: flex; justify-content: space-between; align-items: center;">
-                                        <div style="font-weight: bold;">${event.title}</div>
-                                        <span style="font-size: 0.7rem; color: #555; padding: 1px 5px; background: rgba(0,0,0,0.05); border-radius: 3px;">${event.calendar_type || 'Personal'}</span>
+                        combined.forEach(event => {
+                            // Sessions should not open the event edit modal; show details only
+                            if ((event.calendar_type || '') === 'Session') {
+                                html += `
+                                    <div style="padding: 10px; background: ${event.color}20; border-left: 3px solid ${event.color}; border-radius: 3px;">
+                                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                                            <div style="font-weight: bold;">${event.title}</div>
+                                            <span style="font-size: 0.7rem; color: #555; padding: 1px 5px; background: rgba(0,0,0,0.05); border-radius: 3px;">Session</span>
+                                        </div>
+                                        ${event.event_time ? '<div style="font-size: 0.8rem; color: var(--text-secondary);">🕐 ' + event.event_time + '</div>' : ''}
+                                        ${event.description ? '<div style="font-size: 0.8rem; color: var(--text-secondary); margin-top: 3px;">' + event.description + '</div>' : ''}
                                     </div>
-                                    ${event.event_time ? '<div style="font-size: 0.8rem; color: var(--text-secondary);">🕐 ' + event.event_time + '</div>' : ''}
-                                    ${event.description ? '<div style="font-size: 0.8rem; color: var(--text-secondary); margin-top: 3px;">' + event.description + '</div>' : ''}
-                                </div>
-                            `;
+                                `;
+                            } else {
+                                html += `
+                                    <div onclick="editEvent(${event.id}, '${(event.title||'').replace(/'/g, "\\'")}', '${(event.description || '').replace(/'/g, "\\'")}', '${event.event_time || ''}', '${event.color}', '${event.calendar_type || 'Personal'}')" 
+                                         style="padding: 10px; background: ${event.color}20; border-left: 3px solid ${event.color}; border-radius: 3px; cursor: pointer; transition: all 0.2s;">
+                                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                                            <div style="font-weight: bold;">${event.title}</div>
+                                            <span style="font-size: 0.7rem; color: #555; padding: 1px 5px; background: rgba(0,0,0,0.05); border-radius: 3px;">${event.calendar_type || 'Personal'}</span>
+                                        </div>
+                                        ${event.event_time ? '<div style="font-size: 0.8rem; color: var(--text-secondary);">🕐 ' + event.event_time + '</div>' : ''}
+                                        ${event.description ? '<div style="font-size: 0.8rem; color: var(--text-secondary); margin-top: 3px;">' + event.description + '</div>' : ''}
+                                    </div>
+                                `;
+                            }
                         });
                         html += '</div>';
                     } else {
-                        html += '<p style="color: var(--text-secondary);">No events scheduled for this day.</p>';
+                        html += '<p style="color: var(--text-secondary);">No events or sessions scheduled for this day.</p>';
                     }
                     document.getElementById('eventsList').innerHTML = html;
                 });
@@ -464,21 +493,37 @@ $csrfToken = SecurityHelper::generateCSRFToken();
             const fromDate = '<?php echo $monthStart; ?>';
             const toDate = '<?php echo $monthEnd; ?>';
             try {
-                const response = await fetch(`${APP_BASE_URL}/api/events/get.php?from=${fromDate}&to=${toDate}`);
-                const data = await response.json();
-                if (data.success && Array.isArray(data.data)) {
-                    const allEvents = data.data;
-                    const filteredEvents = allEvents.filter(event => selectedCalendarType === 'All' || (event.calendar_type || 'Personal') === selectedCalendarType);
+                // Fetch calendar events and sessions in parallel and merge
+                const [eventsResp, sessionsResp] = await Promise.all([
+                    fetch(`${APP_BASE_URL}/api/events/get.php?from=${fromDate}&to=${toDate}`).then(r => r.json()),
+                    fetch(`${APP_BASE_URL}/api/sessions/get.php?from=${fromDate}&to=${toDate}`).then(r => r.json())
+                ]);
 
-                    const eventsByDate = {};
-                    filteredEvents.forEach(event => {
-                        if (!eventsByDate[event.event_date]) eventsByDate[event.event_date] = [];
-                        eventsByDate[event.event_date].push(event);
-                    });
+                const eventsArr = (eventsResp.data || []) || [];
+                const sessionsArr = (sessionsResp.data || sessionsResp.sessions || []) || [];
 
-                    document.querySelectorAll('.calendar-day-cell').forEach(cell => {
-                        const date = cell.dataset.date;
-                        const events = eventsByDate[date] || [];
+                const mappedSessions = sessionsArr.map(s => ({
+                    id: 'session_' + s.id,
+                    title: (s.project_name ? s.project_name + ' - Session' : 'Session'),
+                    description: s.description || '',
+                    event_date: s.start_time ? s.start_time.split(' ')[0] : '',
+                    event_time: s.start_time ? s.start_time.split(' ')[1].slice(0,5) : '',
+                    color: s.project_color || '#42c88a',
+                    calendar_type: 'Session'
+                }));
+
+                const allEvents = eventsArr.concat(mappedSessions);
+                const filteredEvents = allEvents.filter(event => selectedCalendarType === 'All' || (event.calendar_type || 'Personal') === selectedCalendarType);
+
+                const eventsByDate = {};
+                filteredEvents.forEach(event => {
+                    if (!eventsByDate[event.event_date]) eventsByDate[event.event_date] = [];
+                    eventsByDate[event.event_date].push(event);
+                });
+
+                document.querySelectorAll('.calendar-day-cell').forEach(cell => {
+                    const date = cell.dataset.date;
+                    const events = eventsByDate[date] || [];
 
                         const existingTitle = cell.querySelector('div');
                         const lines = [];
