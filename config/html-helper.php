@@ -45,6 +45,7 @@ HTML;
         
         <ul class="navbar-menu" id="navMenu">
             <li><a href="{$baseUrl}/dashboard.php" class="nav-link $(currentPage === 'dashboard' ? 'active' : '')">Dashboard</a></li>
+            <li><a href="{$baseUrl}/alarm.php" class="nav-link $(currentPage === 'alarm' ? 'active' : '')">Alarm</a></li>
             <li><a href="{$baseUrl}/stopwatch.php" class="nav-link $(currentPage === 'stopwatch' ? 'active' : '')">Stopwatch</a></li>
             <li><a href="{$baseUrl}/calendar.php" class="nav-link $(currentPage === 'calendar' ? 'active' : '')">Calendar</a></li>
             <li><a href="{$baseUrl}/reports.php" class="nav-link $(currentPage === 'reports' ? 'active' : '')">Reports</a></li>

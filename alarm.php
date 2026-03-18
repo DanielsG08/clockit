@@ -1,144 +1,58 @@
 <?php
-session_start();
+require_once 'config/init.php';
 
-// Check if user is logged in
-if (!isset($_SESSION['user_id'])) {
-    header('Location: index.php');
-    exit;
-}
+requireAuth();
+
+$user = getCurrentUser();
+$userId = $_SESSION['user_id'];
+$db = Database::getInstance();
+
+$selectedProjectId = isset($_GET['project']) ? (int)$_GET['project'] : null;
+$projectId = $selectedProjectId;
+
+// Get user's projects
+$projects = $db->fetchAll(
+    "SELECT id, name, color FROM projects WHERE user_id = ? AND is_active = 1 ORDER BY name",
+    [$userId]
+);
+
+// Get current session if exists
+$currentSession = $db->fetch(
+    "SELECT id FROM time_sessions WHERE user_id = ? AND end_time IS NULL ORDER BY start_time DESC LIMIT 1",
+    [$userId]
+);
 ?>
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Alarm Clock</title>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-        body {
-            font-family: Arial, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
-            padding: 20px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-        }
-        .container {
-            width: 100%;
-            max-width: 500px;
-            background: #fff;
-            padding: 40px;
-            border-radius: 10px;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.2);
-        }
-        .header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 30px;
-            padding-bottom: 20px;
-            border-bottom: 2px solid #667eea;
-        }
-        h1 {
-            color: #333;
-            margin: 0;
-            font-size: 1.8rem;
-        }
-        .back-btn {
-            padding: 8px 16px;
-            background: #667eea;
-            color: white;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-            text-decoration: none;
-            font-size: 0.9rem;
-        }
-        .back-btn:hover {
-            background: #5568d3;
-        }
-        #currentTime {
-            font-size: 2.5rem;
-            margin-bottom: 30px;
-            text-align: center;
-            color: #333;
-            font-family: 'Courier New', monospace;
-            font-weight: bold;
-            background: #f9f9f9;
-            padding: 20px;
-            border-radius: 8px;
-        }
-        .controls {
-            margin-bottom: 20px;
-            display: flex;
-            flex-direction: column;
-            gap: 15px;
-            align-items: center;
-        }
-        input[type="time"] {
-            padding: 12px;
-            font-size: 1rem;
-            border: 2px solid #667eea;
-            border-radius: 5px;
-            width: 100%;
-            max-width: 200px;
-        }
-        .button-group {
-            display: flex;
-            gap: 10px;
-            width: 100%;
-            justify-content: center;
-            flex-wrap: wrap;
-        }
-        button {
-            padding: 10px 20px;
-            font-size: 1rem;
-            cursor: pointer;
-            background: #667eea;
-            color: white;
-            border: none;
-            border-radius: 5px;
-            transition: background 0.3s;
-        }
-        button:hover:not(:disabled) {
-            background: #5568d3;
-        }
-        button:disabled {
-            background: #ccc;
-            cursor: not-allowed;
-        }
-        #alarmStatus {
-            text-align: center;
-            color: #666;
-            margin-top: 15px;
-            font-size: 0.9rem;
-        }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <div class="header">
-            <h1>⏰ Alarm</h1>
-            <a href="dashboard.php" class="back-btn">← Dashboard</a>
+<?php HTMLHelper::renderHeader('Alarm', $user); ?>
+<body class="<?php echo $user['theme'] === 'dark' ? 'dark-theme' : 'light-theme'; ?>">
+    <?php HTMLHelper::renderNavigation('alarm', $user); ?>
+
+    <div class="container-narrow">
+        <div style="margin-bottom: 30px;">
+            <h1>⏰ Alarm Clock</h1>
+            <p class="text-muted">Set reminders for your tasks</p>
         </div>
-        
-        <div id="currentTime">--:--:--</div>
-        <div class="controls">
-            <input type="time" id="alarmTime">
-            <div class="button-group">
-                <button id="setAlarm">Set Alarm</button>
-                <button id="clearAlarm" disabled>Clear Alarm</button>
+
+        <div class="card">
+            <div style="background: var(--bg-secondary); padding: 40px 20px; border-radius: 8px; margin-bottom: 30px; text-align: center;">
+                <div id="currentTime" style="font-size: 3.5rem; font-family: 'Courier New', monospace; font-weight: bold; color: #667eea; letter-spacing: 2px;">
+                    00:00:00 AM
+                </div>
+                <div id="alarmStatus" style="font-size: 1.2rem; color: var(--text-secondary); margin-top: 10px; height: 1.5rem;">
+                    </div>
             </div>
-            <div id="alarmStatus"></div>
+
+            <div class="form-group mb-30">
+                <label for="alarmTime">Set Alarm Time</label>
+                <input type="time" id="alarmTime" class="form-control" style="max-width: 220px; margin: 0 auto; display: block; text-align: center; font-size: 1.2rem;">
+            </div>
+
+            <div style="display: flex; gap: 10px; margin-bottom: 10px; justify-content: center; flex-wrap: wrap;">
+                <button id="setAlarm" class="btn btn-primary btn-lg">Set Alarm</button>
+                <button id="clearAlarm" class="btn btn-secondary btn-lg" disabled>✕ Clear</button>
+            </div>
         </div>
     </div>
+
     <audio id="alarmSound" src="https://actions.google.com/sounds/v1/alarms/alarm_clock.ogg" preload="auto"></audio>
 
     <script>
@@ -150,34 +64,57 @@ if (!isset($_SESSION['user_id'])) {
         const alarmStatus = document.getElementById('alarmStatus');
 
         let alarmTime = null;
-        let alarmTimeout = null;
 
         function updateCurrentTime() {
             const now = new Date();
-            currentTimeEl.textContent = now.toLocaleTimeString();
+            
+            // Format for display: HH:MM:SS AM/PM
+            const timeString = now.toLocaleTimeString([], { 
+                hour: '2-digit', 
+                minute: '2-digit', 
+                second: '2-digit', 
+                hour12: true 
+            });
+            
+            currentTimeEl.textContent = timeString;
+
             if (alarmTime) {
                 checkAlarm(now);
             }
         }
 
         function checkAlarm(now) {
-            const nowStr = now.toTimeString().slice(0,5);
-            if (nowStr === alarmTime) {
+            // Time
+            const current24h = now.getHours().toString().padStart(2, '0') + ":" + 
+                             now.getMinutes().toString().padStart(2, '0');
+            
+            if (current24h === alarmTime) {
                 alarmSound.play().catch(err => console.log('Could not play sound:', err));
                 alert('Alarm!');
                 clearAlarm();
             }
         }
 
+        function formatTo12h(time24) {
+            if (!time24) return '';
+            let [hours, minutes] = time24.split(':');
+            let ampm = hours >= 12 ? 'PM' : 'AM';
+            hours = hours % 12 || 12;
+            return `${hours}:${minutes} ${ampm}`;
+        }
+
         function setAlarm() {
-            alarmTime = alarmTimeInput.value;
-            if (!alarmTime) {
+            const val = alarmTimeInput.value;
+            if (!val) {
                 alert('Please select a time');
                 return;
             }
+            
+            alarmTime = val;
             setAlarmBtn.disabled = true;
             clearAlarmBtn.disabled = false;
-            alarmStatus.textContent = `Alarm set for ${alarmTime}`;
+            alarmStatus.textContent = `Alarm set for ${formatTo12h(val)}`;
+            alarmStatus.style.color = "#667eea";
         }
 
         function clearAlarm() {
@@ -191,8 +128,9 @@ if (!isset($_SESSION['user_id'])) {
         setAlarmBtn.addEventListener('click', setAlarm);
         clearAlarmBtn.addEventListener('click', clearAlarm);
         
-        // Initial time display
         updateCurrentTime();
     </script>
+
+    <?php HTMLHelper::renderFooter(); ?>
 </body>
 </html>
