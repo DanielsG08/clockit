@@ -40,6 +40,29 @@ class Database {
 
         if (!in_array('users', $tables)) {
             $this->createTables();
+        } else {
+            // If the database already exists, ensure new schema elements are present
+            if (!in_array('calendars', $tables)) {
+                $this->connection->exec(
+                    "CREATE TABLE calendars (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        user_id INTEGER NOT NULL,
+                        name TEXT NOT NULL,
+                        color TEXT DEFAULT '#667eea',
+                        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                        FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
+                    )"
+                );
+            }
+
+            // Add calendar_id to calendar_events if missing
+            $stmt = $this->connection->query("PRAGMA table_info(calendar_events)");
+            $columns = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            $columnNames = array_column($columns, 'name');
+            if (!in_array('calendar_id', $columnNames)) {
+                $this->connection->exec("ALTER TABLE calendar_events ADD COLUMN calendar_id INTEGER");
+            }
         }
     }
 
@@ -140,10 +163,22 @@ class Database {
                 UNIQUE(user_id, team_id)
             )",
 
+            // Calendars (calendar groups/categories user can manage)
+            "CREATE TABLE calendars (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER NOT NULL,
+                name TEXT NOT NULL,
+                color TEXT DEFAULT '#667eea',
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
+            )",
+
             // Calendar events
             "CREATE TABLE calendar_events (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 user_id INTEGER NOT NULL,
+                calendar_id INTEGER,
                 event_date DATE NOT NULL,
                 title TEXT NOT NULL,
                 description TEXT,
@@ -151,7 +186,8 @@ class Database {
                 color TEXT DEFAULT '#667eea',
                 created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
                 updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-                FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
+                FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE,
+                FOREIGN KEY(calendar_id) REFERENCES calendars(id) ON DELETE SET NULL
             )",
 
             // Create index for calendar_events

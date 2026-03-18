@@ -23,6 +23,7 @@ $title = isset($_POST['title']) ? trim($_POST['title']) : null;
 $description = isset($_POST['description']) ? trim($_POST['description']) : null;
 $eventTime = isset($_POST['time']) ? $_POST['time'] : null;
 $color = isset($_POST['color']) ? $_POST['color'] : '#667eea';
+$calendarId = isset($_POST['calendar_id']) ? (int)$_POST['calendar_id'] : null;
 
 // Validate inputs
 if (!$eventDate || !$title) {
@@ -60,6 +61,7 @@ try {
             'event_date' => $eventDate,
             'event_time' => $eventTime,
             'color' => $color,
+            'calendar_id' => $calendarId ?: null,
             'updated_at' => date('Y-m-d H:i:s')
         ], 'id = ' . $eventId);
 
@@ -69,6 +71,7 @@ try {
         // Create new event
         $lastId = $db->insert('calendar_events', [
             'user_id' => $userId,
+            'calendar_id' => $calendarId ?: null,
             'event_date' => $eventDate,
             'title' => $title,
             'description' => $description,

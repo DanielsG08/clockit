@@ -70,6 +70,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['signup'])) {
                             'is_active' => 1
                         ]);
 
+                        // Create default calendar
+                        $db->insert('calendars', [
+                            'user_id' => $userId,
+                            'name' => 'Default',
+                            'color' => '#667eea'
+                        ]);
+
                         ActivityLogger::log($userId, 'SIGNUP', 'user', $userId);
 
                         $success = 'Account created successfully! Redirecting to login...';
