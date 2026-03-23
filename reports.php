@@ -59,6 +59,16 @@ foreach ($sessions as $session) {
     $sessionsByDate[$date]['duration'] += $session['duration_seconds'];
 }
 
+// Break time stats
+$breakResult = $db->fetch(
+    "SELECT SUM(b.duration_seconds) as total FROM breaks b
+     LEFT JOIN time_sessions ts ON b.session_id = ts.id
+     WHERE $where",
+    $params
+);
+$breakTotal = $breakResult['total'] ?? 0;
+$breakPercent = $totalDuration > 0 ? ($breakTotal / $totalDuration * 100) : 0;
+
 // Handle export
 if ($exportFormat) {
     header('Content-Type: text/csv');
@@ -132,6 +142,18 @@ if ($exportFormat) {
                     </div>
                     <small class="text-muted">
                         <?php echo round($totalDuration / 3600, 1); ?> hours
+                    </small>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-body">
+                    <div class="text-muted" style="font-size: 0.9rem; margin-bottom: 8px;">Break Time</div>
+                    <div style="font-size: 2rem; font-weight: bold; color: #f39c12;">
+                        <?php echo formatDuration($breakTotal); ?>
+                    </div>
+                    <small class="text-muted">
+                        <?php echo number_format($breakPercent, 1); ?>% of tracked time
                     </small>
                 </div>
             </div>
@@ -212,7 +234,7 @@ if ($exportFormat) {
                         <div style="display: flex; flex-direction: column; gap: 10px;">
                             <?php foreach (array_slice($sessionsByDate, 0, 10) as $date => $data): ?>
                                 <div style="display: flex; justify-content: space-between;">
-                                    <span><?php echo formatDate($date); ?></span>
+                                    <span><?php echo date('Y-m-d', strtotime($date)); ?></span>
                                     <span style="font-weight: bold; color: #667eea;">
                                         <?php echo formatDuration($data['duration']); ?>
                                     </span>

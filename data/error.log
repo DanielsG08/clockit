@@ -170,3 +170,219 @@ Stack trace:
 [23-Mar-2026 16:26:54 UTC] api/sessions/update.php - session csrf: 6b55ab9b14d8249564c1ff37fd322e2e8671d1e910606f43be35d85ac37e9698 | provided: none
 [23-Mar-2026 16:27:02 UTC] api/sessions/update.php - payload: {"id":"26","duration_seconds":2,"end_time":"2026-03-23 16:27:02","project_id":"9","description":"we"}
 [23-Mar-2026 16:27:02 UTC] api/sessions/update.php - session csrf: 6b55ab9b14d8249564c1ff37fd322e2e8671d1e910606f43be35d85ac37e9698 | provided: none
+[23-Mar-2026 16:38:01 UTC] PHP Fatal error:  Uncaught Error: Call to undefined function formatDate() in C:\xampp\htdocs\clockit\reports.php:215
+Stack trace:
+#0 {main}
+  thrown in C:\xampp\htdocs\clockit\reports.php on line 215
+[23-Mar-2026 16:38:01 UTC] Fatal: [1] Uncaught Error: Call to undefined function formatDate() in C:\xampp\htdocs\clockit\reports.php:215
+Stack trace:
+#0 {main}
+  thrown in C:\xampp\htdocs\clockit\reports.php:215
+[23-Mar-2026 16:39:41 UTC] PHP Fatal error:  Uncaught Error: Call to undefined function formatDate() in C:\xampp\htdocs\clockit\reports.php:215
+Stack trace:
+#0 {main}
+  thrown in C:\xampp\htdocs\clockit\reports.php on line 215
+[23-Mar-2026 16:39:41 UTC] Fatal: [1] Uncaught Error: Call to undefined function formatDate() in C:\xampp\htdocs\clockit\reports.php:215
+Stack trace:
+#0 {main}
+  thrown in C:\xampp\htdocs\clockit\reports.php:215
+[23-Mar-2026 16:39:43 UTC] PHP Fatal error:  Uncaught Error: Call to undefined function formatDate() in C:\xampp\htdocs\clockit\reports.php:215
+Stack trace:
+#0 {main}
+  thrown in C:\xampp\htdocs\clockit\reports.php on line 215
+[23-Mar-2026 16:39:43 UTC] Fatal: [1] Uncaught Error: Call to undefined function formatDate() in C:\xampp\htdocs\clockit\reports.php:215
+Stack trace:
+#0 {main}
+  thrown in C:\xampp\htdocs\clockit\reports.php:215
+[23-Mar-2026 16:43:53 UTC] [2] Undefined variable $projectFilterSQL in C:\xampp\htdocs\clockit\dashboard.php:13
+[23-Mar-2026 16:43:53 UTC] [2] Undefined variable $projectParams in C:\xampp\htdocs\clockit\dashboard.php:12
+[23-Mar-2026 16:43:53 UTC] [2] Undefined variable $projectFilterSQL in C:\xampp\htdocs\clockit\dashboard.php:22
+[23-Mar-2026 16:43:53 UTC] [2] Undefined variable $projectParams in C:\xampp\htdocs\clockit\dashboard.php:20
+[23-Mar-2026 16:43:53 UTC] [2] Undefined variable $projectFilterSQL in C:\xampp\htdocs\clockit\dashboard.php:30
+[23-Mar-2026 16:43:53 UTC] [2] Undefined variable $projectParams in C:\xampp\htdocs\clockit\dashboard.php:29
+[23-Mar-2026 16:43:53 UTC] [2] Undefined variable $projectFilterSQL in C:\xampp\htdocs\clockit\dashboard.php:38
+[23-Mar-2026 16:43:53 UTC] [2] Undefined variable $projectParams in C:\xampp\htdocs\clockit\dashboard.php:37
+[23-Mar-2026 16:43:54 UTC] [2] Undefined variable $projectFilterSQL in C:\xampp\htdocs\clockit\dashboard.php:13
+[23-Mar-2026 16:43:54 UTC] [2] Undefined variable $projectParams in C:\xampp\htdocs\clockit\dashboard.php:12
+[23-Mar-2026 16:43:54 UTC] [2] Undefined variable $projectFilterSQL in C:\xampp\htdocs\clockit\dashboard.php:22
+[23-Mar-2026 16:43:54 UTC] [2] Undefined variable $projectParams in C:\xampp\htdocs\clockit\dashboard.php:20
+[23-Mar-2026 16:43:54 UTC] [2] Undefined variable $projectFilterSQL in C:\xampp\htdocs\clockit\dashboard.php:30
+[23-Mar-2026 16:43:54 UTC] [2] Undefined variable $projectParams in C:\xampp\htdocs\clockit\dashboard.php:29
+[23-Mar-2026 16:43:54 UTC] [2] Undefined variable $projectFilterSQL in C:\xampp\htdocs\clockit\dashboard.php:38
+[23-Mar-2026 16:43:54 UTC] [2] Undefined variable $projectParams in C:\xampp\htdocs\clockit\dashboard.php:37
+[23-Mar-2026 16:43:56 UTC] [2] Undefined variable $projectFilterSQL in C:\xampp\htdocs\clockit\dashboard.php:13
+[23-Mar-2026 16:43:56 UTC] [2] Undefined variable $projectParams in C:\xampp\htdocs\clockit\dashboard.php:12
+[23-Mar-2026 16:43:56 UTC] [2] Undefined variable $projectFilterSQL in C:\xampp\htdocs\clockit\dashboard.php:22
+[23-Mar-2026 16:43:56 UTC] [2] Undefined variable $projectParams in C:\xampp\htdocs\clockit\dashboard.php:20
+[23-Mar-2026 16:43:56 UTC] [2] Undefined variable $projectFilterSQL in C:\xampp\htdocs\clockit\dashboard.php:30
+[23-Mar-2026 16:43:56 UTC] [2] Undefined variable $projectParams in C:\xampp\htdocs\clockit\dashboard.php:29
+[23-Mar-2026 16:43:56 UTC] [2] Undefined variable $projectFilterSQL in C:\xampp\htdocs\clockit\dashboard.php:38
+[23-Mar-2026 16:43:56 UTC] [2] Undefined variable $projectParams in C:\xampp\htdocs\clockit\dashboard.php:37
+[23-Mar-2026 16:43:57 UTC] [2] Undefined variable $projectFilterSQL in C:\xampp\htdocs\clockit\dashboard.php:13
+[23-Mar-2026 16:43:57 UTC] [2] Undefined variable $projectParams in C:\xampp\htdocs\clockit\dashboard.php:12
+[23-Mar-2026 16:43:57 UTC] [2] Undefined variable $projectFilterSQL in C:\xampp\htdocs\clockit\dashboard.php:22
+[23-Mar-2026 16:43:57 UTC] [2] Undefined variable $projectParams in C:\xampp\htdocs\clockit\dashboard.php:20
+[23-Mar-2026 16:43:57 UTC] [2] Undefined variable $projectFilterSQL in C:\xampp\htdocs\clockit\dashboard.php:30
+[23-Mar-2026 16:43:57 UTC] [2] Undefined variable $projectParams in C:\xampp\htdocs\clockit\dashboard.php:29
+[23-Mar-2026 16:43:57 UTC] [2] Undefined variable $projectFilterSQL in C:\xampp\htdocs\clockit\dashboard.php:38
+[23-Mar-2026 16:43:57 UTC] [2] Undefined variable $projectParams in C:\xampp\htdocs\clockit\dashboard.php:37
+[23-Mar-2026 16:43:58 UTC] [2] Undefined variable $projectFilterSQL in C:\xampp\htdocs\clockit\dashboard.php:13
+[23-Mar-2026 16:43:58 UTC] [2] Undefined variable $projectParams in C:\xampp\htdocs\clockit\dashboard.php:12
+[23-Mar-2026 16:43:58 UTC] [2] Undefined variable $projectFilterSQL in C:\xampp\htdocs\clockit\dashboard.php:22
+[23-Mar-2026 16:43:58 UTC] [2] Undefined variable $projectParams in C:\xampp\htdocs\clockit\dashboard.php:20
+[23-Mar-2026 16:43:58 UTC] [2] Undefined variable $projectFilterSQL in C:\xampp\htdocs\clockit\dashboard.php:30
+[23-Mar-2026 16:43:58 UTC] [2] Undefined variable $projectParams in C:\xampp\htdocs\clockit\dashboard.php:29
+[23-Mar-2026 16:43:58 UTC] [2] Undefined variable $projectFilterSQL in C:\xampp\htdocs\clockit\dashboard.php:38
+[23-Mar-2026 16:43:58 UTC] [2] Undefined variable $projectParams in C:\xampp\htdocs\clockit\dashboard.php:37
+[23-Mar-2026 16:43:59 UTC] [2] Undefined variable $projectFilterSQL in C:\xampp\htdocs\clockit\dashboard.php:13
+[23-Mar-2026 16:43:59 UTC] [2] Undefined variable $projectParams in C:\xampp\htdocs\clockit\dashboard.php:12
+[23-Mar-2026 16:43:59 UTC] [2] Undefined variable $projectFilterSQL in C:\xampp\htdocs\clockit\dashboard.php:22
+[23-Mar-2026 16:43:59 UTC] [2] Undefined variable $projectParams in C:\xampp\htdocs\clockit\dashboard.php:20
+[23-Mar-2026 16:43:59 UTC] [2] Undefined variable $projectFilterSQL in C:\xampp\htdocs\clockit\dashboard.php:30
+[23-Mar-2026 16:43:59 UTC] [2] Undefined variable $projectParams in C:\xampp\htdocs\clockit\dashboard.php:29
+[23-Mar-2026 16:43:59 UTC] [2] Undefined variable $projectFilterSQL in C:\xampp\htdocs\clockit\dashboard.php:38
+[23-Mar-2026 16:43:59 UTC] [2] Undefined variable $projectParams in C:\xampp\htdocs\clockit\dashboard.php:37
+[23-Mar-2026 16:44:04 UTC] [2] Undefined variable $projectFilterSQL in C:\xampp\htdocs\clockit\dashboard.php:13
+[23-Mar-2026 16:44:04 UTC] [2] Undefined variable $projectParams in C:\xampp\htdocs\clockit\dashboard.php:12
+[23-Mar-2026 16:44:04 UTC] [2] Undefined variable $projectFilterSQL in C:\xampp\htdocs\clockit\dashboard.php:22
+[23-Mar-2026 16:44:04 UTC] [2] Undefined variable $projectParams in C:\xampp\htdocs\clockit\dashboard.php:20
+[23-Mar-2026 16:44:04 UTC] [2] Undefined variable $projectFilterSQL in C:\xampp\htdocs\clockit\dashboard.php:30
+[23-Mar-2026 16:44:04 UTC] [2] Undefined variable $projectParams in C:\xampp\htdocs\clockit\dashboard.php:29
+[23-Mar-2026 16:44:04 UTC] [2] Undefined variable $projectFilterSQL in C:\xampp\htdocs\clockit\dashboard.php:38
+[23-Mar-2026 16:44:04 UTC] [2] Undefined variable $projectParams in C:\xampp\htdocs\clockit\dashboard.php:37
+[23-Mar-2026 16:44:06 UTC] [2] Undefined variable $projectFilterSQL in C:\xampp\htdocs\clockit\dashboard.php:13
+[23-Mar-2026 16:44:06 UTC] [2] Undefined variable $projectParams in C:\xampp\htdocs\clockit\dashboard.php:12
+[23-Mar-2026 16:44:06 UTC] [2] Undefined variable $projectFilterSQL in C:\xampp\htdocs\clockit\dashboard.php:22
+[23-Mar-2026 16:44:06 UTC] [2] Undefined variable $projectParams in C:\xampp\htdocs\clockit\dashboard.php:20
+[23-Mar-2026 16:44:06 UTC] [2] Undefined variable $projectFilterSQL in C:\xampp\htdocs\clockit\dashboard.php:30
+[23-Mar-2026 16:44:06 UTC] [2] Undefined variable $projectParams in C:\xampp\htdocs\clockit\dashboard.php:29
+[23-Mar-2026 16:44:06 UTC] [2] Undefined variable $projectFilterSQL in C:\xampp\htdocs\clockit\dashboard.php:38
+[23-Mar-2026 16:44:06 UTC] [2] Undefined variable $projectParams in C:\xampp\htdocs\clockit\dashboard.php:37
+[23-Mar-2026 16:44:07 UTC] [2] Undefined variable $projectFilterSQL in C:\xampp\htdocs\clockit\dashboard.php:13
+[23-Mar-2026 16:44:07 UTC] [2] Undefined variable $projectParams in C:\xampp\htdocs\clockit\dashboard.php:12
+[23-Mar-2026 16:44:07 UTC] [2] Undefined variable $projectFilterSQL in C:\xampp\htdocs\clockit\dashboard.php:22
+[23-Mar-2026 16:44:07 UTC] [2] Undefined variable $projectParams in C:\xampp\htdocs\clockit\dashboard.php:20
+[23-Mar-2026 16:44:07 UTC] [2] Undefined variable $projectFilterSQL in C:\xampp\htdocs\clockit\dashboard.php:30
+[23-Mar-2026 16:44:07 UTC] [2] Undefined variable $projectParams in C:\xampp\htdocs\clockit\dashboard.php:29
+[23-Mar-2026 16:44:07 UTC] [2] Undefined variable $projectFilterSQL in C:\xampp\htdocs\clockit\dashboard.php:38
+[23-Mar-2026 16:44:07 UTC] [2] Undefined variable $projectParams in C:\xampp\htdocs\clockit\dashboard.php:37
+[23-Mar-2026 16:44:08 UTC] [2] Undefined variable $projectFilterSQL in C:\xampp\htdocs\clockit\dashboard.php:13
+[23-Mar-2026 16:44:08 UTC] [2] Undefined variable $projectParams in C:\xampp\htdocs\clockit\dashboard.php:12
+[23-Mar-2026 16:44:08 UTC] [2] Undefined variable $projectFilterSQL in C:\xampp\htdocs\clockit\dashboard.php:22
+[23-Mar-2026 16:44:08 UTC] [2] Undefined variable $projectParams in C:\xampp\htdocs\clockit\dashboard.php:20
+[23-Mar-2026 16:44:08 UTC] [2] Undefined variable $projectFilterSQL in C:\xampp\htdocs\clockit\dashboard.php:30
+[23-Mar-2026 16:44:08 UTC] [2] Undefined variable $projectParams in C:\xampp\htdocs\clockit\dashboard.php:29
+[23-Mar-2026 16:44:08 UTC] [2] Undefined variable $projectFilterSQL in C:\xampp\htdocs\clockit\dashboard.php:38
+[23-Mar-2026 16:44:08 UTC] [2] Undefined variable $projectParams in C:\xampp\htdocs\clockit\dashboard.php:37
+[23-Mar-2026 16:44:09 UTC] [2] Undefined variable $projectFilterSQL in C:\xampp\htdocs\clockit\dashboard.php:13
+[23-Mar-2026 16:44:09 UTC] [2] Undefined variable $projectParams in C:\xampp\htdocs\clockit\dashboard.php:12
+[23-Mar-2026 16:44:09 UTC] [2] Undefined variable $projectFilterSQL in C:\xampp\htdocs\clockit\dashboard.php:22
+[23-Mar-2026 16:44:09 UTC] [2] Undefined variable $projectParams in C:\xampp\htdocs\clockit\dashboard.php:20
+[23-Mar-2026 16:44:09 UTC] [2] Undefined variable $projectFilterSQL in C:\xampp\htdocs\clockit\dashboard.php:30
+[23-Mar-2026 16:44:09 UTC] [2] Undefined variable $projectParams in C:\xampp\htdocs\clockit\dashboard.php:29
+[23-Mar-2026 16:44:09 UTC] [2] Undefined variable $projectFilterSQL in C:\xampp\htdocs\clockit\dashboard.php:38
+[23-Mar-2026 16:44:09 UTC] [2] Undefined variable $projectParams in C:\xampp\htdocs\clockit\dashboard.php:37
+[23-Mar-2026 16:44:10 UTC] [2] Undefined variable $projectFilterSQL in C:\xampp\htdocs\clockit\dashboard.php:13
+[23-Mar-2026 16:44:10 UTC] [2] Undefined variable $projectParams in C:\xampp\htdocs\clockit\dashboard.php:12
+[23-Mar-2026 16:44:10 UTC] [2] Undefined variable $projectFilterSQL in C:\xampp\htdocs\clockit\dashboard.php:22
+[23-Mar-2026 16:44:10 UTC] [2] Undefined variable $projectParams in C:\xampp\htdocs\clockit\dashboard.php:20
+[23-Mar-2026 16:44:10 UTC] [2] Undefined variable $projectFilterSQL in C:\xampp\htdocs\clockit\dashboard.php:30
+[23-Mar-2026 16:44:10 UTC] [2] Undefined variable $projectParams in C:\xampp\htdocs\clockit\dashboard.php:29
+[23-Mar-2026 16:44:10 UTC] [2] Undefined variable $projectFilterSQL in C:\xampp\htdocs\clockit\dashboard.php:38
+[23-Mar-2026 16:44:10 UTC] [2] Undefined variable $projectParams in C:\xampp\htdocs\clockit\dashboard.php:37
+[23-Mar-2026 16:45:38 UTC] PHP Fatal error:  Uncaught PDOException: SQLSTATE[HY000]: General error: 25 column index out of range in C:\xampp\htdocs\clockit\config\database.php:240
+Stack trace:
+#0 C:\xampp\htdocs\clockit\config\database.php(240): PDOStatement->execute(Array)
+#1 C:\xampp\htdocs\clockit\config\database.php(249): Database->query('SELECT ts.*, p....', Array)
+#2 C:\xampp\htdocs\clockit\dashboard.php(82): Database->fetchAll('SELECT ts.*, p....', Array)
+#3 {main}
+  thrown in C:\xampp\htdocs\clockit\config\database.php on line 240
+[23-Mar-2026 16:45:38 UTC] Fatal: [1] Uncaught PDOException: SQLSTATE[HY000]: General error: 25 column index out of range in C:\xampp\htdocs\clockit\config\database.php:240
+Stack trace:
+#0 C:\xampp\htdocs\clockit\config\database.php(240): PDOStatement->execute(Array)
+#1 C:\xampp\htdocs\clockit\config\database.php(249): Database->query('SELECT ts.*, p....', Array)
+#2 C:\xampp\htdocs\clockit\dashboard.php(82): Database->fetchAll('SELECT ts.*, p....', Array)
+#3 {main}
+  thrown in C:\xampp\htdocs\clockit\config\database.php:240
+[23-Mar-2026 16:45:50 UTC] PHP Fatal error:  Uncaught PDOException: SQLSTATE[HY000]: General error: 25 column index out of range in C:\xampp\htdocs\clockit\config\database.php:240
+Stack trace:
+#0 C:\xampp\htdocs\clockit\config\database.php(240): PDOStatement->execute(Array)
+#1 C:\xampp\htdocs\clockit\config\database.php(249): Database->query('SELECT ts.*, p....', Array)
+#2 C:\xampp\htdocs\clockit\dashboard.php(82): Database->fetchAll('SELECT ts.*, p....', Array)
+#3 {main}
+  thrown in C:\xampp\htdocs\clockit\config\database.php on line 240
+[23-Mar-2026 16:45:50 UTC] Fatal: [1] Uncaught PDOException: SQLSTATE[HY000]: General error: 25 column index out of range in C:\xampp\htdocs\clockit\config\database.php:240
+Stack trace:
+#0 C:\xampp\htdocs\clockit\config\database.php(240): PDOStatement->execute(Array)
+#1 C:\xampp\htdocs\clockit\config\database.php(249): Database->query('SELECT ts.*, p....', Array)
+#2 C:\xampp\htdocs\clockit\dashboard.php(82): Database->fetchAll('SELECT ts.*, p....', Array)
+#3 {main}
+  thrown in C:\xampp\htdocs\clockit\config\database.php:240
+[23-Mar-2026 16:46:02 UTC] PHP Fatal error:  Uncaught PDOException: SQLSTATE[HY000]: General error: 25 column index out of range in C:\xampp\htdocs\clockit\config\database.php:240
+Stack trace:
+#0 C:\xampp\htdocs\clockit\config\database.php(240): PDOStatement->execute(Array)
+#1 C:\xampp\htdocs\clockit\config\database.php(249): Database->query('SELECT ts.*, p....', Array)
+#2 C:\xampp\htdocs\clockit\dashboard.php(82): Database->fetchAll('SELECT ts.*, p....', Array)
+#3 {main}
+  thrown in C:\xampp\htdocs\clockit\config\database.php on line 240
+[23-Mar-2026 16:46:02 UTC] Fatal: [1] Uncaught PDOException: SQLSTATE[HY000]: General error: 25 column index out of range in C:\xampp\htdocs\clockit\config\database.php:240
+Stack trace:
+#0 C:\xampp\htdocs\clockit\config\database.php(240): PDOStatement->execute(Array)
+#1 C:\xampp\htdocs\clockit\config\database.php(249): Database->query('SELECT ts.*, p....', Array)
+#2 C:\xampp\htdocs\clockit\dashboard.php(82): Database->fetchAll('SELECT ts.*, p....', Array)
+#3 {main}
+  thrown in C:\xampp\htdocs\clockit\config\database.php:240
+[23-Mar-2026 16:46:16 UTC] PHP Fatal error:  Uncaught PDOException: SQLSTATE[HY000]: General error: 25 column index out of range in C:\xampp\htdocs\clockit\config\database.php:240
+Stack trace:
+#0 C:\xampp\htdocs\clockit\config\database.php(240): PDOStatement->execute(Array)
+#1 C:\xampp\htdocs\clockit\config\database.php(249): Database->query('SELECT ts.*, p....', Array)
+#2 C:\xampp\htdocs\clockit\dashboard.php(82): Database->fetchAll('SELECT ts.*, p....', Array)
+#3 {main}
+  thrown in C:\xampp\htdocs\clockit\config\database.php on line 240
+[23-Mar-2026 16:46:16 UTC] Fatal: [1] Uncaught PDOException: SQLSTATE[HY000]: General error: 25 column index out of range in C:\xampp\htdocs\clockit\config\database.php:240
+Stack trace:
+#0 C:\xampp\htdocs\clockit\config\database.php(240): PDOStatement->execute(Array)
+#1 C:\xampp\htdocs\clockit\config\database.php(249): Database->query('SELECT ts.*, p....', Array)
+#2 C:\xampp\htdocs\clockit\dashboard.php(82): Database->fetchAll('SELECT ts.*, p....', Array)
+#3 {main}
+  thrown in C:\xampp\htdocs\clockit\config\database.php:240
+[23-Mar-2026 16:48:55 UTC] PHP Fatal error:  Uncaught Error: Call to undefined function formatDate() in C:\xampp\htdocs\clockit\reports.php:215
+Stack trace:
+#0 {main}
+  thrown in C:\xampp\htdocs\clockit\reports.php on line 215
+[23-Mar-2026 16:48:55 UTC] Fatal: [1] Uncaught Error: Call to undefined function formatDate() in C:\xampp\htdocs\clockit\reports.php:215
+Stack trace:
+#0 {main}
+  thrown in C:\xampp\htdocs\clockit\reports.php:215
+[23-Mar-2026 16:49:15 UTC] PHP Fatal error:  Uncaught Error: Call to undefined function formatDate() in C:\xampp\htdocs\clockit\reports.php:215
+Stack trace:
+#0 {main}
+  thrown in C:\xampp\htdocs\clockit\reports.php on line 215
+[23-Mar-2026 16:49:15 UTC] Fatal: [1] Uncaught Error: Call to undefined function formatDate() in C:\xampp\htdocs\clockit\reports.php:215
+Stack trace:
+#0 {main}
+  thrown in C:\xampp\htdocs\clockit\reports.php:215
+[23-Mar-2026 16:49:18 UTC] PHP Fatal error:  Uncaught Error: Call to undefined function formatDate() in C:\xampp\htdocs\clockit\reports.php:215
+Stack trace:
+#0 {main}
+  thrown in C:\xampp\htdocs\clockit\reports.php on line 215
+[23-Mar-2026 16:49:18 UTC] Fatal: [1] Uncaught Error: Call to undefined function formatDate() in C:\xampp\htdocs\clockit\reports.php:215
+Stack trace:
+#0 {main}
+  thrown in C:\xampp\htdocs\clockit\reports.php:215
+[23-Mar-2026 16:49:46 UTC] PHP Fatal error:  Uncaught Error: Call to undefined function formatDate() in C:\xampp\htdocs\clockit\reports.php:215
+Stack trace:
+#0 {main}
+  thrown in C:\xampp\htdocs\clockit\reports.php on line 215
+[23-Mar-2026 16:49:46 UTC] Fatal: [1] Uncaught Error: Call to undefined function formatDate() in C:\xampp\htdocs\clockit\reports.php:215
+Stack trace:
+#0 {main}
+  thrown in C:\xampp\htdocs\clockit\reports.php:215
+[23-Mar-2026 16:50:45 UTC] PHP Fatal error:  Uncaught Error: Call to undefined function formatDate() in C:\xampp\htdocs\clockit\reports.php:215
+Stack trace:
+#0 {main}
+  thrown in C:\xampp\htdocs\clockit\reports.php on line 215
+[23-Mar-2026 16:50:45 UTC] Fatal: [1] Uncaught Error: Call to undefined function formatDate() in C:\xampp\htdocs\clockit\reports.php:215
+Stack trace:
+#0 {main}
+  thrown in C:\xampp\htdocs\clockit\reports.php:215

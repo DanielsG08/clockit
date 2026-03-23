@@ -7,11 +7,36 @@ $user = getCurrentUser();
 $userId = $_SESSION['user_id'];
 $db = Database::getInstance();
 
+$projects = $db->fetchAll(
+    "SELECT * FROM projects WHERE user_id = ? AND is_active = 1 ORDER BY name",
+    [$userId]
+);
+
+// Project filter params
+$projectId = isset($_GET['project_id']) ? intval($_GET['project_id']) : 0;
+$selectedProjectName = 'All Projects';
+$projectFilterSQL = '';
+$projectParams = [$userId];
+
+if ($projectId > 0) {
+    $selectedProject = $db->fetch(
+        "SELECT id, name FROM projects WHERE user_id = ? AND id = ?",
+        [$userId, $projectId]
+    );
+    if ($selectedProject) {
+        $selectedProjectName = htmlspecialchars($selectedProject['name']);
+        $projectFilterSQL = ' AND ts.project_id = ?';
+        $projectParams[] = $projectId;
+    } else {
+        $projectId = 0;
+    }
+}
+
 // Get today's total time
 $todayResult = $db->fetch(
-    "SELECT SUM(COALESCE(duration_seconds, (strftime('%s', end_time) - strftime('%s', start_time)))) as total FROM time_sessions 
-     WHERE user_id = ? AND DATE(start_time) = DATE('now')",
-    [$userId]
+    "SELECT SUM(COALESCE(ts.duration_seconds, (strftime('%s', ts.end_time) - strftime('%s', ts.start_time)))) as total FROM time_sessions ts 
+     WHERE ts.user_id = ? AND DATE(ts.start_time) = DATE('now')" . $projectFilterSQL,
+    $projectParams
 );
 $todayTotal = $todayResult['total'] ?? 0;
 
@@ -19,39 +44,35 @@ $todayTotal = $todayResult['total'] ?? 0;
 $todayBreakResult = $db->fetch(
     "SELECT SUM(b.duration_seconds) as total FROM breaks b
      LEFT JOIN time_sessions ts ON b.session_id = ts.id
-     WHERE ts.user_id = ? AND DATE(b.start_time) = DATE('now')",
-    [$userId]
+     WHERE ts.user_id = ? AND DATE(b.start_time) = DATE('now')" . $projectFilterSQL,
+    $projectParams
 );
 $todayBreakTotal = $todayBreakResult['total'] ?? 0;
 
 // Get this week's total
 $weekResult = $db->fetch(
-    "SELECT SUM(COALESCE(duration_seconds, (strftime('%s', end_time) - strftime('%s', start_time)))) as total FROM time_sessions 
-     WHERE user_id = ? AND DATE(start_time) >= DATE('now', '-7 days')",
-    [$userId]
+    "SELECT SUM(COALESCE(ts.duration_seconds, (strftime('%s', ts.end_time) - strftime('%s', ts.start_time)))) as total FROM time_sessions ts 
+     WHERE ts.user_id = ? AND DATE(ts.start_time) >= DATE('now', '-7 days')" . $projectFilterSQL,
+    $projectParams
 );
 $weekTotal = $weekResult['total'] ?? 0;
 
-// Get projects
-$projects = $db->fetchAll(
-    "SELECT * FROM projects WHERE user_id = ? AND is_active = 1 ORDER BY name",
-    [$userId]
+// Get statistics
+$totalSessions = $db->fetch(
+    "SELECT COUNT(*) as count, SUM(COALESCE(ts.duration_seconds, (strftime('%s', ts.end_time) - strftime('%s', ts.start_time)))) as total FROM time_sessions ts 
+     WHERE ts.user_id = ?" . $projectFilterSQL,
+    $projectParams
 );
 
 // Get recent sessions
 $recentSessions = $db->fetchAll(
     "SELECT ts.*, p.name as project_name FROM time_sessions ts
      LEFT JOIN projects p ON ts.project_id = p.id
-     WHERE ts.user_id = ? 
+     WHERE ts.user_id = ?" . $projectFilterSQL . "
      ORDER BY ts.start_time DESC LIMIT 5",
-    [$userId]
+    $projectParams
 );
 
-// Get statistics
-$totalSessions = $db->fetch(
-    "SELECT COUNT(*) as count, SUM(COALESCE(duration_seconds, (strftime('%s', end_time) - strftime('%s', start_time)))) as total FROM time_sessions WHERE user_id = ?",
-    [$userId]
-);
 $userName = $user && $user['full_name'] ? htmlspecialchars($user['full_name']) : (isset($user['email']) ? explode('@', $user['email'])[0] : 'User');
 ?>
 <?php HTMLHelper::renderHeader('Dashboard', $user); ?>
@@ -63,6 +84,18 @@ $userName = $user && $user['full_name'] ? htmlspecialchars($user['full_name']) :
             <h1>Welcome back, <?php echo $userName; ?>! 👋</h1>
             <p class="text-muted">Track your time and boost productivity</p>
         </div>
+
+        <form method="get" style="margin-bottom: 20px; display: flex; gap: 12px; align-items: center; flex-wrap: wrap;">
+            <label for="project_filter" style="font-weight: 600;">Project filter</label>
+            <select id="project_filter" name="project_id" onchange="this.form.submit()" style="padding: 0.4rem 0.6rem; border-radius: 4px;">
+                <option value="" <?php echo $projectId <= 0 ? 'selected' : ''; ?>>All Projects</option>
+                <?php foreach ($projects as $project): ?>
+                    <option value="<?php echo $project['id']; ?>" <?php echo ($projectId > 0 && $projectId == $project['id']) ? 'selected' : ''; ?>><?php echo htmlspecialchars($project['name']); ?></option>
+                <?php endforeach; ?>
+            </select>
+            <span class="text-muted" style="font-size: 0.9rem;">Showing: <?php echo $selectedProjectName; ?></span>
+            <noscript><button type="submit" class="btn btn-primary">Apply</button></noscript>
+        </form>
 
         <!-- Quick Stats -->
         <div class="row" style="margin-bottom: 40px;">
