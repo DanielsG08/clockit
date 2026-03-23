@@ -17,7 +17,11 @@ $body = file_get_contents('php://input');
 $data = json_decode($body, true);
 if (!is_array($data)) $data = $_POST;
 
+// Debug: log incoming payload to error log for troubleshooting (temporary)
+error_log('api/sessions/update.php - payload: ' . json_encode($data));
+
 // CSRF
+error_log('api/sessions/update.php - session csrf: ' . ($_SESSION['csrf_token'] ?? 'none') . ' | provided: ' . ($data['csrf_token'] ?? 'none'));
 if (!isset($data['csrf_token']) || !SecurityHelper::verifyCSRFToken($data['csrf_token'])) {
     ResponseHelper::error('Invalid CSRF token', 403);
 }

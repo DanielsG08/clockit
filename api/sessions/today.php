@@ -9,7 +9,7 @@ $userId = $_SESSION['user_id'];
 $db = Database::getInstance();
 
 $sessions = $db->fetchAll(
-    "SELECT ts.id, ts.project_id, ts.description, ts.duration_seconds, p.name as project_name
+    "SELECT ts.id, ts.project_id, ts.description, ts.duration_seconds, ts.start_time, ts.end_time, p.name as project_name
      FROM time_sessions ts
      LEFT JOIN projects p ON ts.project_id = p.id
      WHERE ts.user_id = ? AND DATE(ts.start_time) = DATE('now')

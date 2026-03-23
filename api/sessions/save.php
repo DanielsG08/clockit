@@ -45,7 +45,8 @@ if ($method === 'POST') {
         $startTime = date('Y-m-d H:i:s', strtotime("-{$durationSeconds} seconds"));
     }
 
-    if ($durationSeconds === null) {
+    // Allow creating an open session when only start_time is provided (no end_time/duration)
+    if ($durationSeconds === null && !$startTime) {
         ResponseHelper::error('Missing required fields: provide duration_seconds or start_time and end_time', 400);
     }
 
@@ -58,14 +59,18 @@ if ($method === 'POST') {
     }
 
     try {
-        $sessionId = $db->insert('time_sessions', [
+        $sessionData = [
             'user_id' => $userId,
             'project_id' => $projectId,
             'start_time' => $startTime,
-            'end_time' => $endTime,
-            'duration_seconds' => $durationSeconds,
             'description' => $description
-        ]);
+        ];
+
+        // If we have an end_time or duration, include them
+        if ($endTime) $sessionData['end_time'] = $endTime;
+        if ($durationSeconds !== null) $sessionData['duration_seconds'] = $durationSeconds;
+
+        $sessionId = $db->insert('time_sessions', $sessionData);
 
         // Save break if exists
         if ($breakSeconds > 0) {

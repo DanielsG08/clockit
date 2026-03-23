@@ -166,3 +166,7 @@ Stack trace:
 Stack trace:
 #0 {main}
   thrown in C:\xampp\htdocs\clockit\reports.php:215
+[23-Mar-2026 16:26:54 UTC] api/sessions/update.php - payload: {"id":"25","duration_seconds":2,"end_time":"2026-03-23 16:26:54","project_id":"9","description":""}
+[23-Mar-2026 16:26:54 UTC] api/sessions/update.php - session csrf: 6b55ab9b14d8249564c1ff37fd322e2e8671d1e910606f43be35d85ac37e9698 | provided: none
+[23-Mar-2026 16:27:02 UTC] api/sessions/update.php - payload: {"id":"26","duration_seconds":2,"end_time":"2026-03-23 16:27:02","project_id":"9","description":"we"}
+[23-Mar-2026 16:27:02 UTC] api/sessions/update.php - session csrf: 6b55ab9b14d8249564c1ff37fd322e2e8671d1e910606f43be35d85ac37e9698 | provided: none

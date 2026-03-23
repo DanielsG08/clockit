@@ -26,6 +26,8 @@ $currentSession = $db->fetch(
 <body class="<?php echo $user['theme'] === 'dark' ? 'dark-theme' : 'light-theme'; ?>">
     <?php HTMLHelper::renderNavigation('stopwatch', $user); ?>
 
+    <?php HTMLHelper::renderCSRFField(); ?>
+
     <div class="container-narrow">
         <div style="margin-bottom: 30px;">
             <h1>⏱️ Time Tracker</h1>
@@ -101,6 +103,7 @@ $currentSession = $db->fetch(
                 this.isPaused = false;
                 this.onBreak = false;
                 this.sessionId = null;
+                this.currentBreakId = null;
                 this.animationId = null;
 
                 this.elements = {
@@ -129,12 +132,11 @@ $currentSession = $db->fetch(
                 this.elements.resumeBtn.addEventListener('click', () => this.onBreak ? this.resumeWork() : this.resumeFromPause());
             }
 
-            start() {
+            async start() {
                 if (!this.elements.project.value) {
                     alert('Please select a project');
                     return;
                 }
-
                 this.isRunning = true;
                 this.isPaused = false;
                 this.onBreak = false;
@@ -168,13 +170,33 @@ $currentSession = $db->fetch(
                 this.tick();
             }
 
-            stop() {
+            async stop() {
+                // Ensure we compute elapsed immediately in case tick hasn't updated yet
+                if (this.startTime) {
+                    this.elapsedMs = Date.now() - this.startTime;
+                    this.elapsed = Math.floor(this.elapsedMs / 1000);
+                    this.elements.display.textContent = this.formatTime(this.elapsed);
+                }
+
                 if (this.elapsed === 0) return;
+
+                // If currently on a break, end it first (client-side)
+                if (this.onBreak) {
+                    if (this.breakStartTime) {
+                        this.breakTime += Date.now() - this.breakStartTime;
+                    }
+                    this.onBreak = false;
+                    this.breakStartTime = null;
+                }
 
                 this.isRunning = false;
                 this.isPaused = false;
                 this.elements.startBtn.textContent = '▶ Start';
-                this.saveSession();
+
+                // Always save session using the existing saveSession flow (create session with duration)
+                await this.saveSession();
+
+                this.loadTodaySessions();
                 this.reset();
             }
 
@@ -194,22 +216,36 @@ $currentSession = $db->fetch(
                 this.updateButtons();
             }
 
-            takeBreak() {
+            async takeBreak() {
                 if (!this.isRunning) return;
 
                 this.onBreak = true;
                 this.breakStartTime = Date.now();
                 this.elements.breakDisplay.style.display = 'block';
+
+                // Break tracking is handled client-side; server break records are optional and skipped to avoid CSRF/update issues
+
                 this.updateButtons();
                 this.tick();
             }
 
-            resumeWork() {
+            async resumeWork() {
                 if (!this.onBreak) return;
 
                 if (this.breakStartTime) {
                     this.breakTime += Date.now() - this.breakStartTime;
                 }
+
+                // Close break on server if created
+                if (this.currentBreakId) {
+                    try {
+                        await API.post(`${APP_BASE_URL}/api/breaks/update.php`, { id: this.currentBreakId });
+                    } catch (e) {
+                        console.warn('Failed to update break on resume:', e);
+                    }
+                    this.currentBreakId = null;
+                }
+
                 this.onBreak = false;
                 this.breakStartTime = null;
                 this.isRunning = true;
@@ -273,10 +309,21 @@ $currentSession = $db->fetch(
                 };
 
                 try {
-                    const response = await API.post(`${APP_BASE_URL}/api/sessions/save.php`, data);
-                    if (response.success) {
+                    if (this.sessionId) {
+                        // update existing session
+                        await API.post(`${APP_BASE_URL}/api/sessions/update.php`, Object.assign({ id: this.sessionId }, data));
                         Notification.success('Session saved!');
                         this.loadTodaySessions();
+                        return;
+                    }
+
+                    const response = await API.post(`${APP_BASE_URL}/api/sessions/save.php`, data);
+                    console.log('saveSession response:', response);
+                    if (response && response.success) {
+                        Notification.success('Session saved!');
+                        this.loadTodaySessions();
+                    } else {
+                        Notification.error('Failed to save session');
                     }
                 } catch (e) {
                     Notification.error('Failed to save session: ' + e.message);
@@ -295,7 +342,17 @@ $currentSession = $db->fetch(
                                     <small class="text-muted">${session.description || 'No description'}</small>
                                 </div>
                                 <div style="text-align: right; font-weight: bold; color: #667eea;">
-                                    ${this.formatTime(session.duration_seconds)}
+                                                    ${(() => {
+                                                        const dur = Number(session.duration_seconds);
+                                                        if (!isNaN(dur) && dur > 0) return this.formatTime(dur);
+                                                        // fallback: compute from start/end
+                                                        if (session.end_time && session.start_time) {
+                                                            const s = new Date(session.start_time).getTime();
+                                                            const e = new Date(session.end_time).getTime();
+                                                            if (!isNaN(s) && !isNaN(e) && e >= s) return this.formatTime(Math.floor((e - s) / 1000));
+                                                        }
+                                                        return this.formatTime(0);
+                                                    })()}
                                 </div>
                             </div>
                         `).join('');

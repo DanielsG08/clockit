@@ -9,15 +9,24 @@ $db = Database::getInstance();
 
 // Get today's total time
 $todayResult = $db->fetch(
-    "SELECT SUM(duration_seconds) as total FROM time_sessions 
+    "SELECT SUM(COALESCE(duration_seconds, (strftime('%s', end_time) - strftime('%s', start_time)))) as total FROM time_sessions 
      WHERE user_id = ? AND DATE(start_time) = DATE('now')",
     [$userId]
 );
 $todayTotal = $todayResult['total'] ?? 0;
 
+// Get today's total break time
+$todayBreakResult = $db->fetch(
+    "SELECT SUM(b.duration_seconds) as total FROM breaks b
+     LEFT JOIN time_sessions ts ON b.session_id = ts.id
+     WHERE ts.user_id = ? AND DATE(b.start_time) = DATE('now')",
+    [$userId]
+);
+$todayBreakTotal = $todayBreakResult['total'] ?? 0;
+
 // Get this week's total
 $weekResult = $db->fetch(
-    "SELECT SUM(duration_seconds) as total FROM time_sessions 
+    "SELECT SUM(COALESCE(duration_seconds, (strftime('%s', end_time) - strftime('%s', start_time)))) as total FROM time_sessions 
      WHERE user_id = ? AND DATE(start_time) >= DATE('now', '-7 days')",
     [$userId]
 );
@@ -40,7 +49,7 @@ $recentSessions = $db->fetchAll(
 
 // Get statistics
 $totalSessions = $db->fetch(
-    "SELECT COUNT(*) as count, SUM(duration_seconds) as total FROM time_sessions WHERE user_id = ?",
+    "SELECT COUNT(*) as count, SUM(COALESCE(duration_seconds, (strftime('%s', end_time) - strftime('%s', start_time)))) as total FROM time_sessions WHERE user_id = ?",
     [$userId]
 );
 $userName = $user && $user['full_name'] ? htmlspecialchars($user['full_name']) : (isset($user['email']) ? explode('@', $user['email'])[0] : 'User');
@@ -71,6 +80,15 @@ $userName = $user && $user['full_name'] ? htmlspecialchars($user['full_name']) :
                     <div class="text-muted" style="font-size: 0.9rem; margin-bottom: 8px;">This Week</div>
                     <div style="font-size: 2rem; font-weight: bold; color: #42c88a;">
                         <?php echo formatDuration($weekTotal); ?>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-body">
+                    <div class="text-muted" style="font-size: 0.9rem; margin-bottom: 8px;">Break Time Today</div>
+                    <div style="font-size: 2rem; font-weight: bold; color: #f39c12;">
+                        <?php echo formatDuration($todayBreakTotal); ?>
                     </div>
                 </div>
             </div>
@@ -146,7 +164,15 @@ $userName = $user && $user['full_name'] ? htmlspecialchars($user['full_name']) :
                                                 <?php endif; ?>
                                             </div>
                                             <div style="text-align: right; font-weight: bold; color: #667eea;">
-                                                <?php echo formatDuration($session['duration_seconds'] ?? 0); ?>
+                                                <?php
+                                                    $sessDur = isset($session['duration_seconds']) ? (int)$session['duration_seconds'] : null;
+                                                    if ($sessDur === null && !empty($session['end_time']) && !empty($session['start_time'])) {
+                                                        $s = strtotime($session['start_time']);
+                                                        $e = strtotime($session['end_time']);
+                                                        if ($s !== false && $e !== false && $e >= $s) $sessDur = $e - $s;
+                                                    }
+                                                    echo formatDuration($sessDur ?? 0);
+                                                ?>
                                             </div>
                                         </div>
                                     </div>

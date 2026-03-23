@@ -48,12 +48,22 @@ class API {
             }
         };
 
+        // Attach CSRF token from DOM if present for state-changing requests
+        const methodUpper = method.toUpperCase();
+        if ((methodUpper === 'POST' || methodUpper === 'PUT' || methodUpper === 'DELETE')) {
+            const csrfEl = document.querySelector('input[name="csrf_token"]');
+            if (csrfEl) {
+                if (!data) data = {};
+                if (typeof data === 'object' && !data.csrf_token) data.csrf_token = csrfEl.value;
+            }
+        }
+
         if (data) {
             options.body = JSON.stringify(data);
         }
 
         try {
-            const response = await fetch(url, options);
+            const response = await fetch(resolvedUrl, options);
             const result = await response.json();
 
             if (!response.ok) {
