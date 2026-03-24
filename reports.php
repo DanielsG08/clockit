@@ -69,6 +69,20 @@ $breakResult = $db->fetch(
 $breakTotal = $breakResult['total'] ?? 0;
 $breakPercent = $totalDuration > 0 ? ($breakTotal / $totalDuration * 100) : 0;
 
+// Breaks by date (for trend chart)
+$breaksByDateRows = $db->fetchAll(
+    "SELECT DATE(ts.start_time) as date, SUM(b.duration_seconds) as break_seconds
+     FROM breaks b
+     LEFT JOIN time_sessions ts ON b.session_id = ts.id
+     WHERE $where
+     GROUP BY DATE(ts.start_time)",
+    $params
+);
+$breaksByDate = [];
+foreach ($breaksByDateRows as $r) {
+    $breaksByDate[$r['date']] = (int)$r['break_seconds'];
+}
+
 // Handle export
 if ($exportFormat) {
     header('Content-Type: text/csv');
@@ -282,7 +296,85 @@ if ($exportFormat) {
                 <?php endif; ?>
             </div>
         </div>
+
+        <!-- Wasted Time Trend Chart -->
+        <div class="card" style="margin-top:30px;">
+            <div class="card-header">
+                <h3 class="card-title">Wasted Time Trend (Break % by Day)</h3>
+            </div>
+            <div class="card-body">
+                <canvas id="wasteTrendChart" width="800" height="300"></canvas>
+            </div>
+        </div>
     </div>
+
+    <!-- Chart.js CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        (function(){
+            // Prepare labels (dates) sorted ascending
+            var sessionsByDate = <?php echo json_encode($sessionsByDate); ?>;
+            var breaksByDate = <?php echo json_encode($breaksByDate); ?>;
+
+            var dates = Object.keys(sessionsByDate).sort();
+            var labels = [];
+            var breakPercents = [];
+
+            dates.forEach(function(d){
+                var sessionDur = sessionsByDate[d].duration || 0;
+                var breakSec = breaksByDate[d] || 0;
+                var pct = sessionDur > 0 ? (breakSec / sessionDur * 100) : 0;
+                labels.push(d);
+                // Round to 1 decimal place
+                breakPercents.push(Math.round(pct * 10) / 10);
+            });
+
+            var ctx = document.getElementById('wasteTrendChart').getContext('2d');
+            new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        {
+                            label: 'Break % (wasted time)',
+                            data: breakPercents,
+                            fill: false,
+                            borderColor: '#f39c12',
+                            backgroundColor: '#f39c12',
+                            tension: 0.2,
+                            pointRadius: 4
+                        },
+                        {
+                            label: 'Productive %',
+                            data: breakPercents.map(function(v){ return Math.round((100 - v) * 10) / 10; }),
+                            fill: false,
+                            borderColor: '#42c88a',
+                            backgroundColor: '#42c88a',
+                            tension: 0.2,
+                            pointRadius: 3
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    scales: {
+                        y: {
+                            suggestedMin: 0,
+                            suggestedMax: 100,
+                            title: { display: true, text: 'Percentage (%)' }
+                        },
+                        x: {
+                            title: { display: true, text: 'Date' }
+                        }
+                    },
+                    plugins: {
+                        tooltip: { mode: 'index', intersect: false },
+                        legend: { position: 'top' }
+                    }
+                }
+            });
+        })();
+    </script>
 
     <?php HTMLHelper::renderFooter(); ?>
 </body>
