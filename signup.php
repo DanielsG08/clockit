@@ -79,7 +79,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['signup'])) {
 
                         ActivityLogger::log($userId, 'SIGNUP', 'user', $userId);
 
-                        $success = 'Account created successfully! Redirecting to login...';
+                        // Auto-login the new user and redirect to dashboard
+                        $_SESSION['user_id'] = $userId;
+                        $_SESSION['user_email'] = $email;
+                        $_SESSION['user_name'] = $fullName;
+                        $_SESSION['is_admin'] = 0;
+                        $_SESSION['theme'] = 'light';
+
+                        // Clear any recorded login attempts and log the login activity
+                        SecurityHelper::clearLoginAttempts($email);
+                        ActivityLogger::log($userId, 'LOGIN', 'user', $userId);
+
+                        header('Location: dashboard.php');
+                        exit;
                     } catch (Exception $e) {
                         $error = 'An error occurred during registration. Please try again.';
                     }
