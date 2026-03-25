@@ -83,6 +83,33 @@ foreach ($breaksByDateRows as $r) {
     $breaksByDate[$r['date']] = (int)$r['break_seconds'];
 }
 
+// Break percent stats per day
+$dailyBreakPercents = [];
+foreach ($sessionsByDate as $date => $data) {
+    $dailyDuration = $data['duration'];
+    if ($dailyDuration > 0) {
+        $breakSeconds = $breaksByDate[$date] ?? 0;
+        $dailyBreakPercents[] = ($breakSeconds / $dailyDuration) * 100;
+    }
+}
+
+$avgBreakPercent = 0;
+$minBreakPercent = 0;
+$maxBreakPercent = 0;
+$startBreakPercent = 0;
+$endBreakPercent = 0;
+if (!empty($dailyBreakPercents)) {
+    $avgBreakPercent = array_sum($dailyBreakPercents) / count($dailyBreakPercents);
+    $minBreakPercent = min($dailyBreakPercents);
+    $maxBreakPercent = max($dailyBreakPercents);
+    $sortedDates = array_keys($sessionsByDate);
+    sort($sortedDates);
+    $firstDate = $sortedDates[0];
+    $lastDate = end($sortedDates);
+    $startBreakPercent = (($breaksByDate[$firstDate] ?? 0) / $sessionsByDate[$firstDate]['duration']) * 100;
+    $endBreakPercent = (($breaksByDate[$lastDate] ?? 0) / $sessionsByDate[$lastDate]['duration']) * 100;
+}
+
 // Handle export
 if ($exportFormat) {
     header('Content-Type: text/csv');
@@ -297,13 +324,30 @@ if ($exportFormat) {
             </div>
         </div>
 
-        <!-- Wasted Time Trend Chart -->
+        <!-- Time Trend Chart -->
         <div class="card" style="margin-top:30px;">
             <div class="card-header">
-                <h3 class="card-title">Wasted Time Trend (Break % by Day)</h3>
+                <h3 class="card-title">Time Trend (Daily Session & Break Time)</h3>
             </div>
             <div class="card-body">
-                <canvas id="wasteTrendChart" width="800" height="300"></canvas>
+                <canvas id="timeTrendChart" width="800" height="400"></canvas>
+            </div>
+        </div>
+
+        <!-- Break % Trend Chart -->
+        <div class="card" style="margin-top:30px;">
+            <div class="card-header">
+                <h3 class="card-title">Break % Trend</h3>
+            </div>
+            <div class="card-body">
+                <canvas id="breakPercentChart" width="800" height="400"></canvas>
+                <div style="margin-top:20px; display:flex; flex-wrap:wrap; gap:1rem;">
+                    <div><strong>Avg Break %</strong>: <?php echo number_format($avgBreakPercent, 1); ?>%</div>
+                    <div><strong>Min Break %</strong>: <?php echo number_format($minBreakPercent, 1); ?>%</div>
+                    <div><strong>Max Break %</strong>: <?php echo number_format($maxBreakPercent, 1); ?>%</div>
+                    <div><strong>Start Period Break %</strong>: <?php echo number_format($startBreakPercent, 1); ?>%</div>
+                    <div><strong>End Period Break %</strong>: <?php echo number_format($endBreakPercent, 1); ?>%</div>
+                </div>
             </div>
         </div>
     </div>
@@ -318,35 +362,98 @@ if ($exportFormat) {
 
             var dates = Object.keys(sessionsByDate).sort();
             var labels = [];
+            var sessionMinutes = [];
+            var breakMinutes = [];
             var breakPercents = [];
 
             dates.forEach(function(d){
                 var sessionDur = sessionsByDate[d].duration || 0;
                 var breakSec = breaksByDate[d] || 0;
+                var sessionMin = sessionDur / 60;
+                var breakMin = breakSec / 60;
                 var pct = sessionDur > 0 ? (breakSec / sessionDur * 100) : 0;
+
                 labels.push(d);
-                // Round to 1 decimal place
+                sessionMinutes.push(Math.round(sessionMin));
+                breakMinutes.push(Math.round(breakMin));
                 breakPercents.push(Math.round(pct * 10) / 10);
             });
 
-            var ctx = document.getElementById('wasteTrendChart').getContext('2d');
-            new Chart(ctx, {
+            // helper: convert minutes to H:MM label
+            function minsToTimeLabel(mins) {
+                var sign = mins < 0 ? '-' : '';
+                mins = Math.abs(mins);
+                var h = Math.floor(mins / 60);
+                var m = Math.round(mins % 60);
+                if (m === 60) {
+                    h += 1; m = 0;
+                }
+                return sign + h + ':' + (m < 10 ? '0' : '') + m;
+            }
+
+            var timeCtx = document.getElementById('timeTrendChart').getContext('2d');
+            new Chart(timeCtx, {
                 type: 'line',
                 data: {
                     labels: labels,
                     datasets: [
                         {
-                            label: 'Break % (wasted time)',
-                            data: breakPercents,
+                            label: 'Session Time',
+                            data: sessionMinutes,
                             fill: false,
-                            borderColor: '#f39c12',
-                            backgroundColor: '#f39c12',
+                            borderColor: '#667eea',
+                            backgroundColor: '#667eea',
                             tension: 0.2,
                             pointRadius: 4
                         },
                         {
-                            label: 'Productive %',
-                            data: breakPercents.map(function(v){ return Math.round((100 - v) * 10) / 10; }),
+                            label: 'Break Time',
+                            data: breakMinutes,
+                            fill: false,
+                            borderColor: '#f39c12',
+                            backgroundColor: '#f39c12',
+                            tension: 0.2,
+                            pointRadius: 3
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    scales: {
+                        y: {
+                            title: { display: true, text: 'Time (H:MM)' },
+                            ticks: {
+                                callback: function(value) { return minsToTimeLabel(value); }
+                            }
+                        },
+                        x: {
+                            title: { display: true, text: 'Date' }
+                        }
+                    },
+                    plugins: {
+                        tooltip: {
+                            mode: 'index',
+                            intersect: false,
+                            callbacks: {
+                                label: function(context) {
+                                    return context.dataset.label + ': ' + minsToTimeLabel(context.parsed.y);
+                                }
+                            }
+                        },
+                        legend: { position: 'top' }
+                    }
+                }
+            });
+
+            var percentCtx = document.getElementById('breakPercentChart').getContext('2d');
+            new Chart(percentCtx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        {
+                            label: 'Break %',
+                            data: breakPercents,
                             fill: false,
                             borderColor: '#42c88a',
                             backgroundColor: '#42c88a',
@@ -359,16 +466,24 @@ if ($exportFormat) {
                     responsive: true,
                     scales: {
                         y: {
-                            suggestedMin: 0,
-                            suggestedMax: 100,
-                            title: { display: true, text: 'Percentage (%)' }
+                            title: { display: true, text: '% of Total Time' },
+                            min: 0,
+                            max: 100
                         },
                         x: {
                             title: { display: true, text: 'Date' }
                         }
                     },
                     plugins: {
-                        tooltip: { mode: 'index', intersect: false },
+                        tooltip: {
+                            mode: 'index',
+                            intersect: false,
+                            callbacks: {
+                                label: function(context) {
+                                    return context.dataset.label + ': ' + context.parsed.y + '%';
+                                }
+                            }
+                        },
                         legend: { position: 'top' }
                     }
                 }
