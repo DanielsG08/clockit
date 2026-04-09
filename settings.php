@@ -96,7 +96,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                 <div class="card-body">
                     <p class="text-muted" style="margin-bottom: 15px;">Your data is stored securely and never shared with third parties.</p>
                     <div style="display: flex; gap: 10px; flex-wrap: wrap;">
-                        <a href="reports.php?export=csv" class="btn btn-secondary">📥 Export Data</a>
+                        <a href="reports.php?export=csv" class="btn btn-secondary">� Export Data to Excel</a>
                         <button type="button" class="btn btn-secondary" onclick="alert('Contact support to request deletion.')">🗑️ Delete Account</button>
                     </div>
                 </div>

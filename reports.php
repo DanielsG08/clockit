@@ -112,22 +112,229 @@ if (!empty($dailyBreakPercents)) {
 
 // Handle export
 if ($exportFormat) {
-    header('Content-Type: text/csv');
-    header('Content-Disposition: attachment; filename="time_report_' . date('Y-m-d') . '.csv"');
+    if ($exportFormat === 'html') {
+        // Export as HTML with embedded charts
+        header('Content-Type: text/html');
+        header('Content-Disposition: attachment; filename="time_report_' . date('Y-m-d') . '.html"');
+
+        // Prepare data for charts
+        $sortedDates = array_keys($sessionsByDate);
+        sort($sortedDates);
+
+        $dates = [];
+        $trackedHours = [];
+        $breakHours = [];
+        $breakPercents = [];
+
+        foreach ($sortedDates as $date) {
+            $trackedSeconds = $sessionsByDate[$date]['duration'];
+            $breakSeconds = $breaksByDate[$date] ?? 0;
+            $dates[] = $date;
+            $trackedHours[] = round($trackedSeconds / 3600, 2);
+            $breakHours[] = round($breakSeconds / 3600, 2);
+            $breakPercents[] = $trackedSeconds > 0 ? round(($breakSeconds / $trackedSeconds) * 100, 2) : 0;
+        }
+
+        $datesJson = json_encode($dates);
+        $trackedJson = json_encode($trackedHours);
+        $breakJson = json_encode($breakHours);
+        $percentJson = json_encode($breakPercents);
+
+        $projectName = '';
+        if ($projectId) {
+            $projectName = $db->fetch("SELECT name FROM projects WHERE id = ?", [$projectId])['name'] ?? 'Unknown';
+            $projectName = '<p>Project: ' . htmlspecialchars($projectName) . '</p>';
+        }
+
+        $tableRows = '';
+        foreach ($sortedDates as $index => $date) {
+            $tableRows .= '<tr>';
+            $tableRows .= '<td>' . $dates[$index] . '</td>';
+            $tableRows .= '<td>' . $trackedHours[$index] . '</td>';
+            $tableRows .= '<td>' . $breakHours[$index] . '</td>';
+            $tableRows .= '<td>' . $breakPercents[$index] . '</td>';
+            $tableRows .= '</tr>';
+        }
+
+        $currentDate = date('Y-m-d');
+        $currentDateTime = date('Y-m-d H:i:s');
+
+        echo <<<HTML
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Time Tracking Report - {$currentDate}</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .charts-container { display: flex; gap: 30px; margin: 20px 0; flex-wrap: wrap; width: 100%; }
+        .chart-container { flex: 1; min-width: calc(50% - 15px); height: 700px; }
+        table { border-collapse: collapse; width: 100%; margin: 20px 0; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+        th { background-color: #f2f2f2; }
+        h1, h2 { color: #333; }
+        .chart-section { margin-bottom: 40px; flex: 1; min-width: calc(50% - 15px); }
+        .chart-section h2 { margin-bottom: 10px; }
+    </style>
+</head>
+<body>
+    <h1>Time Tracking Report</h1>
+    <p>Generated on: {$currentDateTime}</p>
+    <p>Period: {$dateFrom} to {$dateTo}</p>
+    {$projectName}
     
-    echo "Project,Date,Duration (Hours),Session Duration,Notes\n";
-    foreach ($sessions as $session) {
-        $duration = round($session['duration_seconds'] / 3600, 2);
-        echo sprintf(
-            '"%s","%s",%.2f,"%s","%s"' . "\n",
-            $session['project_name'] ?? 'Uncategorized',
-            date('Y-m-d H:i', strtotime($session['start_time'])),
-            $duration,
-            formatDuration($session['duration_seconds']),
-            $session['description'] ?? ''
-        );
+    <h2>Daily Time Summary</h2>
+    <table>
+        <thead>
+            <tr>
+                <th>Date</th>
+                <th>Tracked Duration (Hours)</th>
+                <th>Break Duration (Hours)</th>
+                <th>Break Percentage (%)</th>
+            </tr>
+        </thead>
+        <tbody>
+            {$tableRows}
+        </tbody>
+    </table>
+
+    <div class="charts-container">
+        <div class="chart-section">
+            <h2>Time Tracked vs Break Time</h2>
+            <div class="chart-container">
+                <canvas id="timeChart"></canvas>
+            </div>
+        </div>
+
+        <div class="chart-section">
+            <h2>Break Percentage Trend</h2>
+            <div class="chart-container">
+                <canvas id="breakChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Time Tracked vs Break Time Chart
+        const timeCtx = document.getElementById("timeChart").getContext("2d");
+        new Chart(timeCtx, {
+            type: "line",
+            data: {
+                labels: {$datesJson},
+                datasets: [
+                    {
+                        label: "Tracked Hours",
+                        data: {$trackedJson},
+                        borderColor: "rgb(54, 162, 235)",
+                        backgroundColor: "rgba(54, 162, 235, 0.1)",
+                        tension: 0.1
+                    },
+                    {
+                        label: "Break Hours",
+                        data: {$breakJson},
+                        borderColor: "rgb(255, 99, 132)",
+                        backgroundColor: "rgba(255, 99, 132, 0.1)",
+                        tension: 0.1
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    title: {
+                        display: true,
+                        text: "Daily Time Tracked vs Break Time"
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        title: {
+                            display: true,
+                            text: "Hours"
+                        }
+                    },
+                    x: {
+                        title: {
+                            display: true,
+                            text: "Date"
+                        }
+                    }
+                }
+            }
+        });
+
+        // Break Percentage Chart
+        const breakCtx = document.getElementById("breakChart").getContext("2d");
+        new Chart(breakCtx, {
+            type: "line",
+            data: {
+                labels: {$datesJson},
+                datasets: [{
+                    label: "Break Percentage (%)",
+                    data: {$percentJson},
+                    borderColor: "rgb(75, 192, 192)",
+                    backgroundColor: "rgba(75, 192, 192, 0.1)",
+                    tension: 0.1
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    title: {
+                        display: true,
+                        text: "Daily Break Percentage Trend"
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        title: {
+                            display: true,
+                            text: "Percentage (%)"
+                        }
+                    },
+                    x: {
+                        title: {
+                            display: true,
+                            text: "Date"
+                        }
+                    }
+                }
+            }
+        });
+    </script>
+</body>
+</html>
+HTML;
+        exit;
+    } else {
+        header('Content-Type: text/csv');
+        header('Content-Disposition: attachment; filename="daily_time_report_' . date('Y-m-d') . '.csv"');
+
+        echo "Date,Tracked Duration (Hours),Break Duration (Hours),Break Percentage (%)\n";
+
+        // Sort dates for consistent output
+        $sortedDates = array_keys($sessionsByDate);
+        sort($sortedDates);
+
+        foreach ($sortedDates as $date) {
+            $trackedSeconds = $sessionsByDate[$date]['duration'];
+            $breakSeconds = $breaksByDate[$date] ?? 0;
+            $trackedHours = round($trackedSeconds / 3600, 2);
+            $breakHours = round($breakSeconds / 3600, 2);
+            $breakPercent = $trackedSeconds > 0 ? round(($breakSeconds / $trackedSeconds) * 100, 2) : 0;
+
+            echo sprintf(
+                '"%s",%.2f,%.2f,%.2f' . "\n",
+                $date,
+                $trackedHours,
+                $breakHours,
+                $breakPercent
+            );
+        }
+        exit;
     }
-    exit;
 }
 ?>
 <?php HTMLHelper::renderHeader('Reports', $user); ?>
@@ -225,10 +432,16 @@ if ($exportFormat) {
 
             <div class="card">
                 <div class="card-body">
-                    <a href="?export=csv&project=<?php echo $projectId ?? ''; ?>&from=<?php echo $dateFrom; ?>&to=<?php echo $dateTo; ?>" 
-                       class="btn btn-secondary" style="width: 100%; justify-content: center;">
-                        📥 Export CSV
-                    </a>
+                    <div style="display: flex; gap: 10px;">
+                        <a href="?export=csv&project=<?php echo $projectId ?? ''; ?>&from=<?php echo $dateFrom; ?>&to=<?php echo $dateTo; ?>" 
+                           class="btn btn-secondary" style="flex: 1;">
+                            📊 Export CSV
+                        </a>
+                        <a href="?export=html&project=<?php echo $projectId ?? ''; ?>&from=<?php echo $dateFrom; ?>&to=<?php echo $dateTo; ?>" 
+                           class="btn btn-primary" style="flex: 1;">
+                            📈 Export with Graphs
+                        </a>
+                    </div>
                 </div>
             </div>
         </div>
